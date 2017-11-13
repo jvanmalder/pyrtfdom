@@ -233,7 +233,17 @@ class RTFParser(object):
 
 		# Skip over these sections. We're not going to use them (at least
 		# for now.)
-		if self.TokenType.OPEN_BRACE == self.__prevToken[0] and (
+		if '\*' == self.__prevToken[1] and (
+			word == '\\generator' or
+			# WTF is this, even?! Encountered this in a LibreOffice document,
+			# but it's not documented.
+			word == '\\pgdsctbl'
+		):
+			self.__curState['groupSkip'] = True
+
+		# Skip over these sections. We're not going to use them (at least
+		# for now.)
+		elif self.TokenType.OPEN_BRACE == self.__prevToken[0] and (
 			word == '\\fonttbl' or
 			word == '\\filetbl' or
 			word == '\\colortbl' or
