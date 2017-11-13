@@ -84,10 +84,13 @@ class RTFDOM(object):
 			state = RTFParser.getFullState()
 			for attribute in state:
 				if RTFParser.isAttributeFormat(attribute):
-					if state[attribute]:
-						node = elements.DOMElement.getElement(attribute)
-						self.__curNode.appendChild(node)
-						self.__curNode = node
+					if type(state[attribute]) == bool:
+						if state[attribute]:
+							node = elements.DOMElement.getElement(attribute)
+							self.__curNode.appendChild(node)
+							self.__curNode = node
+					else:
+						para.attributes[attribute] = state[attribute]
 
 			# Create a text node where we'll append text for the paragraph
 			textNode = elements.TextElement()
@@ -115,20 +118,34 @@ class RTFDOM(object):
 
 				if attribute not in oldState.keys() or newState[attribute] != oldState[attribute]:
 
-					# we're turning the attribute on
-					if newState[attribute]:
+					# We're dealing with on/off attributes like bold, italic, etc.
+					if type(newState[attribute]) == bool:
 
-						# elements[attribute] means the element type that
-						# corresponds to the attribute
-						node = elements.DOMElement.getElement(attribute)
-						textNode = elements.TextElement()
-						node.appendChild(textNode)
-						self.__curNode.parent.appendChild(node)
-						self.__curNode = textNode
+						# we're turning the attribute on
+						if newState[attribute]:
 
-					# we're turning the attribute off
+							# elements[attribute] means the element type that
+							# corresponds to the attribute
+							node = elements.DOMElement.getElement(attribute)
+							textNode = elements.TextElement()
+							node.appendChild(textNode)
+							self.__curNode.parent.appendChild(node)
+							self.__curNode = textNode
+
+						# we're turning the attribute off
+						else:
+							turnedOff[attribute] = self.__distanceFromRoot(attribute)
+
+					# For now, any non-boolean attributes must be set at the
+					# paragraph level (this could change as I implement more of
+					# the RTF standard.)
 					else:
-						turnedOff[attribute] = self.__distanceFromRoot(attribute)
+
+						parNode = self.__curNode
+						while 'para' != parNode.nodeType:
+							parNode = parNode.parent
+
+						parNode.attributes[attribute] = newState[attribute]
 
 			# If we turned off one or more formatting attributes, find the DOM
 			# element closest to the root RTF node that got turned off and
@@ -146,10 +163,11 @@ class RTFDOM(object):
 
 				# Now, start a new series of DOM elements that will represent the current state
 				for attribute in newState:
-					if newState[attribute]:
-						node = elements.DOMElement.getElement(attribute)
-						self.__curNode.appendChild(node)
-						self.__curNode = node
+					if type(newState[attribute]) == bool:
+						if newState[attribute]:
+							node = elements.DOMElement.getElement(attribute)
+							self.__curNode.appendChild(node)
+							self.__curNode = node
 
 				textNode = elements.TextElement()
 				self.__curNode.appendChild(textNode)

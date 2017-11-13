@@ -25,7 +25,8 @@ class RTFParser(object):
 		'italic':        False,
 		'bold':          False,
 		'underline':     False,
-		'strikethrough': False
+		'strikethrough': False,
+		'alignment':     'left'
 	}
 
 	__specialStateVars = [
@@ -215,17 +216,6 @@ class RTFParser(object):
 
 	###########################################################################
 
-	# Sets a paragraph-level attribute (not the same as formatting attributes, so
-	# don't confuse them!), such as left/center/right alignment, etc. This means
-	# nothing to the parser itself, and will do nothing unless a callback has
-	# been registered to handle it.
-	def __setParagraphAttribute(self, attribute, value):
-
-		if 'onSetParagraphAttribute' in self.__options['callbacks']:
-			self.__options['callbacks']['onSetParagraphAttribute'](self, attribute, value)
-
-	###########################################################################
-
 	# Process a \field group.
 	def __parseField(self, fldinst, fldrslt):
 
@@ -264,8 +254,8 @@ class RTFParser(object):
 		# We'll treat the value of \*\generator as a document attribute.
 		if '\*' == self.__prevToken[1] and word == '\\generator':
 			# TODO
-			self.__curState['groupSkip'] = True
 			#self.__parseGenerator()
+			self.__curState['groupSkip'] = True
 
 		# WTF is this, even?! Encountered this in a LibreOffice document,
 		# but it's not documented in the standard, and I can't find anything
@@ -428,6 +418,28 @@ class RTFParser(object):
 		# Reset all styling to an off position in the current state
 		elif '\\plain' == word:
 			self.__resetStateFormattingAttributes()
+
+		# Paragraph alignment
+		elif '\\ql' == word:
+			self.__setStateFormattingAttribute('alignment', 'left')
+
+		elif '\\qr' == word:
+			self.__setStateFormattingAttribute('alignment', 'right')
+
+		elif '\\qc' == word:
+			self.__setStateFormattingAttribute('alignment', 'center')
+
+		elif '\\qd' == word:
+			self.__setStateFormattingAttribute('alignment', 'distributed')
+
+		elif '\\qj' == word:
+			self.__setStateFormattingAttribute('alignment', 'justified')
+
+		elif '\\qt' == word:
+			self.__setStateFormattingAttribute('alignment', 'thai-distributed')
+
+		# TODO: how do I want to handle \qkN alignment? Will require setting
+		# two attributes.
 
 		# Italic
 		elif '\\i' == word:
