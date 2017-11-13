@@ -204,6 +204,28 @@ class RTFParser(object):
 
 	###########################################################################
 
+	# Sets a document-evel attribute (not the same as a formatting attribute.)
+	# Examples are the value of \*\generator, etc. This means nothing to the
+	# parser itself, and will do nothing unless a callback has been registered
+	# to handle it.
+	def __setDocumentAttribute(self, attribute, value):
+
+		if 'onSetDocumentAttribute' in self.__options['callbacks']:
+			self.__options['callbacks']['onSetDocumentAttribute'](self, attribute, value)
+
+	###########################################################################
+
+	# Sets a paragraph-level attribute (not the same as formatting attributes, so
+	# don't confuse them!), such as left/center/right alignment, etc. This means
+	# nothing to the parser itself, and will do nothing unless a callback has
+	# been registered to handle it.
+	def __setParagraphAttribute(self, attribute, value):
+
+		if 'onSetParagraphAttribute' in self.__options['callbacks']:
+			self.__options['callbacks']['onSetParagraphAttribute'](self, attribute, value)
+
+	###########################################################################
+
 	# Process a \field group.
 	def __parseField(self, fldinst, fldrslt):
 
@@ -215,6 +237,14 @@ class RTFParser(object):
 		# the dumb way by appending the \fldrslt value to the current paragraph.
 		else:
 			self.__appendToCurrentParagraph(fldrslt)
+
+	###########################################################################
+
+	# Parse the \*\generator attribute 
+	def __parseGenerator(self):
+
+		# TODO
+		pass
 
 	###########################################################################
 
@@ -231,14 +261,16 @@ class RTFParser(object):
 		#       Part 1. Destinations and fields        #
 		################################################
 
-		# Skip over these sections. We're not going to use them (at least
-		# for now.)
-		if '\*' == self.__prevToken[1] and (
-			word == '\\generator' or
-			# WTF is this, even?! Encountered this in a LibreOffice document,
-			# but it's not documented.
-			word == '\\pgdsctbl'
-		):
+		# We'll treat the value of \*\generator as a document attribute.
+		if '\*' == self.__prevToken[1] and word == '\\generator':
+			# TODO
+			self.__curState['groupSkip'] = True
+			#self.__parseGenerator()
+
+		# WTF is this, even?! Encountered this in a LibreOffice document,
+		# but it's not documented in the standard, and I can't find anything
+		# from the LibreOffice documentation. Argh! Just skip over it.
+		elif '\*' == self.__prevToken[1] and word == '\\pgdsctbl':
 			self.__curState['groupSkip'] = True
 
 		# Skip over these sections. We're not going to use them (at least
@@ -253,7 +285,8 @@ class RTFParser(object):
 			word == '\\revtbl' or
 			word == '\\rsidtable' or
 			word == '\\mathprops' or
-			word == '\\generator'
+			word == '\\generator' or
+			word == '\\info' # TODO: parse this into document attributes
 		):
 			self.__curState['groupSkip'] = True
 
