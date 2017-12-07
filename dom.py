@@ -16,6 +16,33 @@ class RTFDOM(object):
 
 	###########################################################################
 
+	# Read-only property that returns the current node.
+	@property
+	def curNode(self):
+
+		return self.__curNode
+
+	###########################################################################
+
+	# Removes the current node and sets the new current node to its parent.
+	# This shouldn't be used very often, but is useful for implementing custom
+	# field types.
+	def removeCurNode(self):
+
+		curParNode = self.__curNode.parent
+		curParNode.removeChild(self.__curNode)
+		self.__curNode = curParNode
+
+	###########################################################################
+
+	# Read-only property that returns the root node.
+	@property
+	def rootNode(self):
+
+		return self.__rootNode
+
+	###########################################################################
+
 	# Finds the attribute DOM element closest to the current node, then calculates
 	# and returns its distance from the root RTF node. If an element for the
 	# given attribute doesn't exist in the chain from current to root node, -1
@@ -181,8 +208,10 @@ class RTFDOM(object):
 
 			# If we recognize the field type, we should invoke the appropriate
 			# driver.
-			if fieldParts[0] in self.__fieldDrivers:
-				self.__fieldDrivers[fieldParts[0]](fieldParts[1], fldrslt)
+			if fieldParts[0] in self.__fieldDriverOverrides:
+				self.__fieldDriverOverrides[fieldParts[0]](self, fieldParts[1], fldrslt)
+			elif fieldParts[0] in self.__fieldDrivers:
+				self.__fieldDrivers[fieldParts[0]](self, fieldParts[1], fldrslt)
 
 			# If we don't know how to process the field, default to inserting
 			# the contents of fldrslt into the current paragraph. Since we're
@@ -209,14 +238,14 @@ class RTFDOM(object):
 	# hierarchy of DOM elements.
 	def __initFieldDrivers(self):
 
-		def hyperlinkDriver(fldPara, fldrslt):
+		def hyperlinkDriver(dom, fldPara, fldrslt):
+
+			curParNode = dom.curNode.parent
 
 			# If the previous text element was empty, it's unnecessary and can
 			# be removed to simplify the tree.
-			curParNode = self.__curNode.parent
-			if 0 == len(self.__curNode.value):
-				curParNode.removeChild(self.__curNode)
-				self.__curNode = curParNode
+			if 0 == len(dom.curNode.value):
+				dom.removeCurNode()
 
 			hyperNode = elements.HyperlinkElement()
 			hyperNode.attributes['href'] = fldPara[1:len(fldPara) - 1]
@@ -224,15 +253,18 @@ class RTFDOM(object):
 
 			textNode = elements.TextElement()
 			hyperNode.appendChild(textNode)
-			self.__curNode = textNode
+			dom.__curNode = textNode
 
-			self.__insertFldrslt(fldrslt)
+			dom.__insertFldrslt(fldrslt)
 
 		#####
 
 		self.__fieldDrivers = {
 			'HYPERLINK': hyperlinkDriver
 		}
+
+		# This is where drivers that override built-in defaults are registered.
+		self.__fieldDriverOverrides = {}
 
 	###########################################################################
 
@@ -258,7 +290,23 @@ class RTFDOM(object):
 	# Overrides an existing or adds a new driver for a given field type.
 	def registerFieldDriver(self, field, driver):
 
-		self.__fieldDrivers[field] = driver
+		if self.__fieldDrivers[field]:
+			self.__fieldDriverOverrides[field] = driver
+		else:
+			self.__fieldDrivers[field] = driver
+
+	###########################################################################
+
+	# Manually runs an original field driver, even if an override exists. A
+	# little hacky, but this allows us to conditionally call the original
+	# driver from a newer overriding driver. If the driver doesn't exist, we'll
+	# just copy in the fldrslt text.
+	def runDefaultFieldDriver(self, driver, fldPara, fldrslt):
+
+		if self.__fieldDrivers[driver]:
+			self.__fieldDrivers[driver](self, fldPara, fldrslt)
+		else:
+			self.__insertFldrslt(fldrslt)
 
 	###########################################################################
 
