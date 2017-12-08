@@ -375,10 +375,6 @@ class RTFParser(object):
 		# A character of the form \'XX to be added to the current paragraph
 		elif "\\'" == word and param:
 
-			print(word)
-			print(param)
-			print("\n\n\nYAY!\n\n\n")
-
 			try:
 
 				charCode = int(param, 16)
