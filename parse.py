@@ -68,15 +68,20 @@ class RTFParser(object):
 
 		if not self.__content[self.__curPos].isalpha() and not self.__content[self.__curPos].isspace():
 
-			# Character represented in \'xx form (if no digit follows, it will
-			# be the responsibility of the parser to treat it as an unsupported
-			# control symbol.)
+			# Character represented in \'xx form (if no hexadecimal digit
+			# follows, it will be the responsibility of the parser to treat it
+			# as an unsupported control symbol.)
 			if "'" == self.__content[self.__curPos]:
 				token = token + self.__content[self.__curPos]
 				self.__curPos = self.__curPos + 1
-				while self.__content[self.__curPos].isdigit():
+				decimalCount = 0
+				while decimalCount < 2 and (
+					self.__content[self.__curPos].isdigit() or
+					self.__content[self.__curPos].upper() in ['A', 'B', 'C', 'D', 'E']
+				):
 					token = token + self.__content[self.__curPos]
 					self.__curPos = self.__curPos + 1
+					decimalCount += 1
 
 			# Control symbol
 			else:
@@ -369,6 +374,10 @@ class RTFParser(object):
 
 		# A character of the form \'XX to be added to the current paragraph
 		elif "\\'" == word and param:
+
+			print(word)
+			print(param)
+			print("\n\n\nYAY!\n\n\n")
 
 			try:
 
