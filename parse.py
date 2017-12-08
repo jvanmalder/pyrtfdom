@@ -41,23 +41,7 @@ class RTFParser(object):
 	# Content
 	def __init__(self, options):
 
-		# A string containing the content of an RTF file
-		self.__content = False
-
-		# Our current index into self.__content
-		self.__curPos = 0
-
-		# Formatting states at various levels of curly braces
-		self.__stateStack = []
-
-		# The current formatting state
-		self.__curState = False
-
-		# Stores the current token during parsing
-		self.__curToken = False
-
-		# Records the previously retrieved token during parsing
-		self.__prevToken = False
+		self.reset()
 
 		# This class only parses the RTF. How that data is encoded and represented
 		# after parsing is up to the client, and the client should provide a
@@ -491,6 +475,29 @@ class RTFParser(object):
 
 	###########################################################################
 
+	# Resets the parser to an initialized state so we can parse another document.
+	def reset(self):
+
+		# A string containing the content of an RTF file
+		self.__content = False
+
+		# Our current index into self.__content
+		self.__curPos = 0
+
+		# Formatting states at various levels of curly braces
+		self.__stateStack = []
+
+		# The current formatting state
+		self.__curState = False
+
+		# Stores the current token during parsing
+		self.__curToken = False
+
+		# Records the previously retrieved token during parsing
+		self.__prevToken = False
+
+	###########################################################################
+
 	# Returns true if the specified attribute is a formatting attribute and false
 	# if not.
 	def isAttributeFormat(self, attr):
@@ -530,9 +537,9 @@ class RTFParser(object):
 	# Parse an RTF file.
 	def openFile(self, filename):
 
+		self.reset()
 		rtfFile = open(filename, 'r')
 		self.__content = rtfFile.read()
-		self.__curPos = 0
 		rtfFile.close()
 
 	###########################################################################
@@ -540,8 +547,8 @@ class RTFParser(object):
 	# Parse an RTF from an already loaded string.
 	def openString(self, rtfContent):
 
+		self.reset()
 		self.__content = rtfContent
-		self.__curPos = 0
 
 	###########################################################################
 

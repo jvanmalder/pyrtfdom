@@ -7,15 +7,6 @@ from pyrtfdom.parse import RTFParser
 
 class RTFDOM(object):
 
-	# Will reference the RTF Parser with custom callbacks
-	parser = None
-
-	# The head and current position in the DOM, respectively
-	__rootNode = None
-	__curNode = None
-
-	###########################################################################
-
 	# Read-only property that returns the current node.
 	@property
 	def curNode(self):
@@ -24,22 +15,23 @@ class RTFDOM(object):
 
 	###########################################################################
 
-	# Removes the current node and sets the new current node to its parent.
-	# This shouldn't be used very often, but is useful for implementing custom
-	# field types.
-	def removeCurNode(self):
-
-		curParNode = self.__curNode.parent
-		curParNode.removeChild(self.__curNode)
-		self.__curNode = curParNode
-
-	###########################################################################
-
 	# Read-only property that returns the root node.
 	@property
 	def rootNode(self):
 
 		return self.__rootNode
+
+	###########################################################################
+
+	# Utility function that parses an RTF snippet and returns its DOM tree.
+	@staticmethod
+	def parseSubRTF(rtfString):
+
+		subTree = RTFDOM()
+		subTree.openString(rtfString)
+		subTree.parse()
+
+		return subTree.getTreeNodes()
 
 	###########################################################################
 
@@ -62,35 +54,6 @@ class RTFDOM(object):
 			node = node.parent
 
 		return distance
-
-	###########################################################################
-
-	# Appends the contents of a fldrslt RTF paragraph into the current paragraph.
-	def __insertFldrslt(self, rtfString):
-
-		curParNode = self.__curNode.parent
-
-		# If the previous text element was empty, it's unnecessary and can be
-		# removed to simplify the tree.
-		if 0 == len(self.__curNode.value):
-			curParNode.removeChild(self.__curNode)
-			self.__curNode = curParNode
-
-		subTree = RTFDOM()
-		subTree.openString('{' + rtfString + '}')
-		subTree.parse()
-
-		subDOM = subTree.getTreeNodes()
-		paraNode = subDOM.children[0]
-
-		for child in paraNode.children:
-			curParNode.appendChild(child)
-
-		# Append a new text element after the contents of fldrslt so we can
-		# continue appending text to the current paragraph.
-		textNode = elements.TextElement()
-		curParNode.appendChild(textNode)
-		self.__curNode = textNode
 
 	###########################################################################
 
@@ -219,7 +182,7 @@ class RTFDOM(object):
 			# class, parse it into a tree, then append that tree to the current
 			# paragraph.
 			else:
-				self.__insertFldrslt(fldrslt)
+				self.insertFldrslt(fldrslt)
 
 		#####
 
@@ -255,7 +218,7 @@ class RTFDOM(object):
 			hyperNode.appendChild(textNode)
 			dom.__curNode = textNode
 
-			dom.__insertFldrslt(fldrslt)
+			dom.insertFldrslt(fldrslt)
 
 		#####
 
@@ -270,12 +233,79 @@ class RTFDOM(object):
 
 	def __init__(self):
 
+		self.reset()
+
+		# Will reference the RTF Parser with custom callbacks
+		self.parser = None
+
 		self.__initParserCallbacks()
 		self.__initFieldDrivers()
 
 		self.parser = RTFParser({
 			'callbacks': self.__parserCallbacks
 		})
+
+	###########################################################################
+
+	# Resets the DOM parser to an initialized state. Allows us to parse another
+	# document.
+	def reset(self):
+
+		# The head and current position in the DOM, respectively
+		self.__rootNode = None
+		self.__curNode = None
+
+	###########################################################################
+
+	# Removes the current node and sets the new current node to its parent.
+	# This shouldn't be used very often, but is useful for implementing custom
+	# field types.
+	def removeCurNode(self):
+
+		curParNode = self.__curNode.parent
+		curParNode.removeChild(self.__curNode)
+		self.__curNode = curParNode
+
+	###########################################################################
+
+	# Inserts a new empty text element into the specified parent element and
+	# sets it as the new current element.
+	def initTextElement(self, parent):
+
+		# Append a new text element after the contents of fldrslt so we can
+		# continue appending text to the current paragraph.
+		textNode = elements.TextElement()
+		parent.appendChild(textNode)
+		self.__curNode = textNode
+
+	###########################################################################
+
+	# Appends the contents of a fldrslt RTF paragraph into the current paragraph.
+	# I decided not to make this private, because a custom field handler needs
+	# to be able to call this, but this really shouldn't be called for any other
+	# reason.
+	def insertFldrslt(self, rtfString):
+
+		curParNode = self.__curNode.parent
+
+		# If the previous text element was empty, it's unnecessary and can be
+		# removed to simplify the tree.
+		if 0 == len(self.__curNode.value):
+			curParNode.removeChild(self.__curNode)
+			self.__curNode = curParNode
+
+		subDOM = RTFDOM.parseSubRTF('{' + rtfString + '}')
+		paraNode = subDOM.children[0]
+
+		for child in paraNode.children:
+			curParNode.appendChild(child)
+
+		# Append a new text element after the contents of fldrslt so we can
+		# continue appending text to the current paragraph.
+		self.initTextElement(curParNode)
+		#textNode = elements.TextElement()
+		#curParNode.appendChild(textNode)
+		#self.__curNode = textNode
 
 	###########################################################################
 
@@ -306,13 +336,14 @@ class RTFDOM(object):
 		if self.__fieldDrivers[driver]:
 			self.__fieldDrivers[driver](self, fldPara, fldrslt)
 		else:
-			self.__insertFldrslt(fldrslt)
+			self.insertFldrslt(fldrslt)
 
 	###########################################################################
 
 	# Open an RTF from a file.
 	def openFile(self, filename):
 
+		self.reset()
 		self.parser.openFile(filename)
 
 	###########################################################################
@@ -320,6 +351,7 @@ class RTFDOM(object):
 	# Open an RTF from a string.
 	def openString(self, text):
 
+		self.reset()
 		self.parser.openString(text)
 
 	###########################################################################

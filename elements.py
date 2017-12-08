@@ -93,6 +93,9 @@ class DOMElement(object):
 		elif 'hyperlink' == elemType:
 			return HyperlinkElement()
 
+		elif 'footnote' == elemType:
+			return FootnoteElement()
+
 		elif 'bold' == elemType:
 			return BoldElement()
 
@@ -190,4 +193,14 @@ class HyperlinkElement(DOMElement):
 	def __init__(self):
 
 		super().__init__('hyperlink')
+
+###############################################################################
+###############################################################################
+
+# Footnote
+class FootnoteElement(DOMElement):
+
+	def __init__(self):
+
+		super().__init__('footnote')
 
