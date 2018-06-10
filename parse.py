@@ -45,8 +45,8 @@ class RTFParser(object):
 
 		# This class only parses the RTF. How that data is encoded and represented
 		# after parsing is up to the client, and the client should provide a
-		# at least a minimum number of callbacks to process that data after it's
-		# extracted from the RTF file.
+		# at least a minimum number of callbacks to process that data as it's
+		# extracted from the RTF.
 		if not options or 'callbacks' not in options:
 			raise Exception('Did not pass required callbacks.')
 		elif (
@@ -194,7 +194,7 @@ class RTFParser(object):
 
 	###########################################################################
 
-	# Sets a document-evel attribute (not the same as a formatting attribute.)
+	# Sets a document level attribute (not the same as a formatting attribute.)
 	# Examples are the value of \*\generator, etc. This means nothing to the
 	# parser itself, and will do nothing unless a callback has been registered
 	# to handle it.
@@ -219,11 +219,19 @@ class RTFParser(object):
 
 	###########################################################################
 
-	# Parse the \*\generator attribute 
+	# Parse the \*\generator attribute
 	def __parseGenerator(self):
 
 		# TODO
 		pass
+
+	###########################################################################
+
+	# Parses a hexadecimal Image ID contained in a bliptag destination. This
+	# value should be identical to whatever's specified in \blipuid.
+	def __parseImageID(self, hexval):
+
+		self.__curState['blipUID'] = int(hexval.lstrip('0'), 16)
 
 	###########################################################################
 
@@ -246,9 +254,8 @@ class RTFParser(object):
 			#self.__parseGenerator()
 			self.__curState['groupSkip'] = True
 
-		# WTF is this, even?! Encountered this in a LibreOffice document,
-		# but it's not documented in the standard, and I can't find anything
-		# from the LibreOffice documentation. Argh! Just skip over it.
+		# Proprietary to LibreOffice / OpenOffice, and I can't even find
+		# documentation for what it's supposed to do, so just skip over it.
 		elif '\*' == self.__prevToken[1] and word == '\\pgdsctbl':
 			self.__curState['groupSkip'] = True
 
@@ -284,7 +291,28 @@ class RTFParser(object):
 				self.__curState['inFieldinst'] = True
 
 		################################################
-		#      Part 2. Escaped special characters      #
+		#           Part 2. Embedded Images            #
+		################################################
+
+		# We'll encounter this destination when parsing images. It's a way to
+		# uniquely identify the image. In my experience with test data, blipuid
+		# and bliptagN are different representations of the same value.
+		elif '\\*' == self.__prevToken[1] and '\\blipuid' == word:
+
+			# We already got the ID in a simpler way, so we can skip over this destination
+			if 'blipUID' in self.__curState:
+				self.__curState['groupSkip'] = True
+
+			# We haven't gotten the ID yet, so go ahead and parse this destination
+			else:
+				self.__curState['inBlipUID'] = True
+
+		# This is the other (easier) way to uniquely identify an image
+		elif '\\bliptag' == word:
+			self.__curState['blipUID'] = int(param, 10)
+
+		################################################
+		#      Part 3. Escaped special characters      #
 		################################################
 
 		elif '\\\\' == word:
@@ -297,7 +325,7 @@ class RTFParser(object):
 			self.__appendToCurrentParagraph('}')
 
 		################################################
-		# Part 3. Unicode and other special Characters #
+		# Part 4. Unicode and other special Characters #
 		################################################
 
 		# Non-breaking space
@@ -396,7 +424,7 @@ class RTFParser(object):
 				return
 
 		################################################
-		#  Part 4. Ordinary control words and symbols  #
+		#    Part 5. Misc control words and symbols    #
 		################################################
 
 		# We're ending the current paragraph and starting a new one
@@ -516,6 +544,8 @@ class RTFParser(object):
 
 	# Crawls up the state stack to fill in any attributes in the current state
 	# that are inherited from a previous state.
+	# TODO: this is really slow and inefficient, according to cProfile. I need
+	# to figure out another way to keep track of this data.
 	def getFullState(self):
 
 		state = self.__curState.copy()
@@ -566,6 +596,10 @@ class RTFParser(object):
 			fldInst = ''
 			fldRslt = ''
 
+			# A temporary buffer for data inside a blipuid destination (for
+			# identifying embedded images)
+			blipUID = ''
+
 			self.__curToken = self.__getNextToken()
 			self.__prevToken = False
 
@@ -611,6 +645,12 @@ class RTFParser(object):
 						fldInst = ''
 						fldRslt = ''
 
+					# We're parsing an image ID (other possible source of ID is
+					# the bliptag control word.)
+					if 'inBlipUID' in oldStateCopy and oldStateCopy['inBlipUID']:
+						self.__parseImageID(blipUID)
+						blipUID = ''
+
 				# We could be skipping over something we're not going to use, such
 				# as \fonttbl, \stylesheet, etc.
 				elif not self.getFullState()['groupSkip']:
@@ -627,6 +667,10 @@ class RTFParser(object):
 					# We're inside the \fldinst portion of a field.
 					elif 'inFieldinst' in self.getFullState() and self.getFullState()['inFieldinst']:
 						fldInst += self.__curToken[1]
+
+					# We're parsing a \blipuid value to identify an image
+					elif 'inBlipUID' in self.getFullState() and self.getFullState()['inBlipUID']:
+						blipUID += self.__curToken[1]
 
 					# We're executing a control word.
 					elif self.TokenType.CONTROL_WORDORSYM == self.__curToken[0]:
