@@ -87,6 +87,9 @@ class DOMElement(object):
 		elif 'text' == elemType:
 			return TextElement()
 
+		elif 'img' == elemType:
+			return ImageElement()
+
 		elif 'para' == elemType:
 			return ParaElement()
 
@@ -132,6 +135,19 @@ class TextElement(DOMElement):
 		super().__init__('text')
 
 		# Children aren't allowed in a text node
+		self._children = False
+
+###############################################################################
+###############################################################################
+
+# Image
+class ImageElement(DOMElement):
+
+	def __init__(self):
+
+		super().__init__('img')
+
+		# Children aren't allowed in an image node
 		self._children = False
 
 ###############################################################################

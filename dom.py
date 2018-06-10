@@ -186,11 +186,34 @@ class RTFDOM(object):
 
 		#####
 
+		def onImage(RTFParser, attributes, image):
+
+			# First, walk up to the first non-text node
+			if 'text' == self.__curNode.nodeType:
+				self.__curNode = self.__curNode.parent
+
+			# Second, create and append the image node
+			node = elements.DOMElement.getElement('img')
+			node.value = image
+			for attribute in attributes.keys():
+				node.attributes[attribute] = attributes[attribute]
+
+			self.__curNode.appendChild(node)
+
+			# Finally, create a new text node to append any text that might be
+			# in the same paragraph.
+			textNode = elements.TextElement()
+			self.__curNode.appendChild(textNode)
+			self.__curNode = textNode
+
+		#####
+
 		self.__parserCallbacks = {
 			'onOpenParagraph': onOpenParagraph,
 			'onAppendParagraph': onAppendParagraph,
 			'onStateChange': onStateChange,
-			'onField': onField
+			'onField': onField,
+			'onImage': onImage
 		}
 
 	###########################################################################
@@ -369,15 +392,20 @@ class RTFDOM(object):
 
 		nodeAttributes = '{'
 		for key in curNode.attributes.keys():
-			nodeAttributes += "'" + key + "': " + curNode.attributes[key] + ", "
+			nodeAttributes += "'" + key + "': " + str(curNode.attributes[key]) + ", "
 		if len(nodeAttributes) > 1:
 			nodeAttributes = nodeAttributes[0:len(nodeAttributes) - 2]
 		nodeAttributes += '}'
 
+		if isinstance(curNode.value, (bytes, bytearray)):
+			nodeValue = '<Binary Data>'
+		else:
+			nodeValue = curNode.value
+
 		print('')
 		print(indent + 'nodeType: ' + curNode.nodeType)
 		print(indent + 'attributes: ' + nodeAttributes)
-		print(indent + 'value: ' + curNode.value)
+		print(indent + 'value: ' + nodeValue)
 		print(indent + 'children: ' + str(curNode.childCount()))
 
 		if curNode.children:

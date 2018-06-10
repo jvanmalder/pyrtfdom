@@ -229,10 +229,10 @@ class RTFParser(object):
 
 	# Parses an embedded image. For now, this only supports the default hex dump
 	# format.
-	def __parseImage(self, pict):
+	def __parseImage(self, attributes, pict):
 
 		if 'onImage' in self.__options['callbacks']:
-			self.__options['callbacks']['onImage'](self, self.__curState['pictAttributes'], binascii.unhexlify(pict))
+			self.__options['callbacks']['onImage'](self, attributes, binascii.unhexlify(pict))
 
 	###########################################################################
 
@@ -744,7 +744,7 @@ class RTFParser(object):
 
 					# We're parsing an embedded image.
 					if 'inPict' in oldStateCopy and oldStateCopy['inPict']:
-						self.__parseImage(pict)
+						self.__parseImage(oldStateCopy['pictAttributes'], pict)
 						pict = ''
 
 				# We could be skipping over something we're not going to use, such
