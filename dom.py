@@ -303,9 +303,6 @@ class RTFDOM(object):
 		# Append a new text element after the contents of fldrslt so we can
 		# continue appending text to the current paragraph.
 		self.initTextElement(curParNode)
-		#textNode = elements.TextElement()
-		#curParNode.appendChild(textNode)
-		#self.__curNode = textNode
 
 	###########################################################################
 

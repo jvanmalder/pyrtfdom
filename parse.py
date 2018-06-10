@@ -4,7 +4,7 @@
 # primarily to extract formatted text, but could easily be extended and turned
 # into a general parser in the future.
 
-import re, time
+import re, time, binascii
 from enum import Enum
 
 class RTFParser(object):
@@ -227,6 +227,15 @@ class RTFParser(object):
 
 	###########################################################################
 
+	# Parses an embedded image. For now, this only supports the default hex dump
+	# format.
+	def __parseImage(self, pict):
+
+		if 'onImage' in self.__options['callbacks']:
+			self.__options['callbacks']['onImage'](self, self.__curState['pictAttributes'], binascii.unhexlify(pict))
+
+	###########################################################################
+
 	# Parses a hexadecimal Image ID contained in a bliptag destination. This
 	# value should be identical to whatever's specified in \blipuid.
 	def __parseImageID(self, hexval):
@@ -294,6 +303,11 @@ class RTFParser(object):
 		#           Part 2. Embedded Images            #
 		################################################
 
+		# We've entered an embedded image.
+		elif self.TokenType.OPEN_BRACE == self.__prevToken[0] and '\\pict' == word:
+			self.__curState['inPict'] = True
+			self.__curState['pictAttributes'] = {}
+
 		# We'll encounter this destination when parsing images. It's a way to
 		# uniquely identify the image. In my experience with test data, blipuid
 		# and bliptagN are different representations of the same value.
@@ -310,6 +324,72 @@ class RTFParser(object):
 		# This is the other (easier) way to uniquely identify an image
 		elif '\\bliptag' == word:
 			self.__curState['blipUID'] = int(param, 10)
+
+		# Various image formatting parameters and metadata
+		elif 'pictAttributes' in self.__curState and word in [
+			'\\picscalex',    # Horizontal scaling %
+			'\\picscaley',    # Vertical scaling %
+			'\\piccropl',     # Twips (1/1440 of an inch) to crop off the left
+			'\\piccropr',     # Twips (1/1440 of an inch) to crop off the right
+			'\\piccropt',     # Twips (1/1440 of an inch) to crop off the top
+			'\\piccropb',     # Twips (1/1440 of an inch) to crop off the bottom
+			'\\picw',         # Width in pixels (if image is bitmap or from QuickDraw)
+			'\\pich',         # Height in pixels (if image is bitmap or from QuickDraw)
+			'\\picwgoal',     # Desired width in twips (1/1440 of an inch)
+			'\\pichgoal',     # Desired height in twips (1/1440 of an inch)
+			'\\picbpp',       # Specifies the bits per pixel in a metafile bitmap.
+			                  # The valid range is 1 through 32, with 1, 4, 8, and
+			                  # 24 being recognized.
+
+			# These apply only to Windows bitmap images
+			'\\wbmbitspixel', # From the 1.9.1 spec: "Number of adjacent color bits
+			                  # on each plane needed to define a pixel. Possible
+			                  # values are 1 (monochrome), 4 (16 colors), 8
+			                  # (256 colors) and 24 (RGB). The default value is 1."
+			'\\wbmplanes',    # From the 1.9.1 spec: "Number of bitmap color planes
+			                  # (must equal 1)."
+			'\\wbmwidthbytes' # From the 1.9.1 spec: "Specifies the number of bytes
+			                  # in each raster line. This value must be an even
+			                  # number because the Windows Graphics Device Interface
+			                  # (GDI) assumes that the bit values of a bitmap form
+			                  # an array of integer (two-byte) values. In other
+			                  # words, \wbmwidthbytes multiplied by 8 must be the
+			                  # next multiple of 16 greater than or equal to the
+			                  # \picw (bitmap width in pixels) value.
+		]:
+			self.__curState['pictAttributes'][word] = int(param, 10)
+
+		# JPG
+		elif 'pictAttributes' in self.__curState and '\\jpegblip' == word:
+			self.__curState['pictAttributes']['source'] = 'jpeg'
+
+		# PNG
+		elif 'pictAttributes' in self.__curState and '\\pngblip' == word:
+			self.__curState['pictAttributes']['source'] = 'png'
+
+		# EMF (Enhanced metafile)
+		elif 'pictAttributes' in self.__curState and '\\emfblip' == word:
+			self.__curState['pictAttributes']['source'] = 'emf'
+
+		# OS/2 metafile
+		elif 'pictAttributes' in self.__curState and '\\pmmetafile' == word:
+			self.__curState['pictAttributes']['source'] = 'os2meta'
+			self.__curState['pictAttributes']['metafileType'] = param
+
+		# Windows metafile
+		elif 'pictAttributes' in self.__curState and '\\wmetafile' == word:
+			self.__curState['pictAttributes']['source'] = 'winmeta'
+			self.__curState['pictAttributes']['metafileMappingMode'] = param
+
+		# Windows device-independent bitmap
+		elif 'pictAttributes' in self.__curState and '\\dibitmap' == word:
+			self.__curState['pictAttributes']['source'] = 'wdibmp'
+			self.__curState['pictAttributes']['bitmapType'] = param
+
+		# Windows device-dependent bitmap
+		elif 'pictAttributes' in self.__curState and '\\wbitmap' == word:
+			self.__curState['pictAttributes']['source'] = 'wddbmp'
+			self.__curState['pictAttributes']['bitmapType'] = param
 
 		################################################
 		#      Part 3. Escaped special characters      #
@@ -600,6 +680,11 @@ class RTFParser(object):
 			# identifying embedded images)
 			blipUID = ''
 
+			# A temporary buffer of picture data. For now, we're only supporting
+			# the default hex dump format. TODO: support binary format (but does
+			# any RTF writer actually output this...?)
+			pict = ''
+
 			self.__curToken = self.__getNextToken()
 			self.__prevToken = False
 
@@ -635,6 +720,12 @@ class RTFParser(object):
 					) and (
 						'inField' not in oldStateCopy or
 						not oldStateCopy['inField']
+					) and (
+						'inBlipUID' not in oldStateCopy or
+						not oldStateCopy['inBlipUID']
+					) and (
+						'inPict' not in oldStateCopy or
+						not oldStateCopy['inPict']
 					) and 'onStateChange' in self.__options['callbacks']:
 						self.__options['callbacks']['onStateChange'](self, oldStateFull, self.getFullState())
 
@@ -650,6 +741,11 @@ class RTFParser(object):
 					if 'inBlipUID' in oldStateCopy and oldStateCopy['inBlipUID']:
 						self.__parseImageID(blipUID)
 						blipUID = ''
+
+					# We're parsing an embedded image.
+					if 'inPict' in oldStateCopy and oldStateCopy['inPict']:
+						self.__parseImage(pict)
+						pict = ''
 
 				# We could be skipping over something we're not going to use, such
 				# as \fonttbl, \stylesheet, etc.
@@ -672,10 +768,16 @@ class RTFParser(object):
 					elif 'inBlipUID' in self.getFullState() and self.getFullState()['inBlipUID']:
 						blipUID += self.__curToken[1]
 
-					# We're executing a control word.
+					# We're executing a control word. Execute this before
+					# appending tokens to any special destination or group that
+					# might contain control words.
 					elif self.TokenType.CONTROL_WORDORSYM == self.__curToken[0]:
 						tokenParts = self.__splitControlWord(self.__curToken)
 						self.__executeControl(tokenParts[0], tokenParts[1])
+
+					# We're parsing a \pict group, which represents an embedded image
+					elif 'inPict' in self.getFullState() and self.getFullState()['inPict'] and not self.__curToken[1].isspace():
+						pict += self.__curToken[1]
 
 					# Just an ordinary printable character (note that literal
 					# newlines are ignored. Only \line will result in an inserted \n.
