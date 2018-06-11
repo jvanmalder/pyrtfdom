@@ -30,11 +30,23 @@ class RTFParser(object):
 	}
 
 	__specialStateVars = [
-		'groupSkip',   # we're skipping the current group
-		'inField',     # we're inside a {\field} group
-		'inFieldinst', # we're inside the {\fldinst} portion of a \field
-		'inFieldrslt'  # we're inside the {\fldrslt} portion of a \field
+		'groupSkip',      # we're skipping the current group
+		'inField',        # we're inside a {\field} group
+		'inFieldinst',    # we're inside the {\fldinst} portion of a \field
+		'inFieldrslt',    # we're inside the {\fldrslt} portion of a \field
+		'inPict',         # We're currently parsing an embedded image
+		'pictAttributes', # Attributes assigned to the image we're currently parsing
+		'inBlipUID',      # We're parsing an image's unique ID
+		'blipUID'         # Contains an image's unique ID
 	]
+
+	###########################################################################
+
+	# Read-only public access to the full state.
+	@property
+	def fullState(self):
+
+		return self.__fullStateCache
 
 	###########################################################################
 
@@ -171,26 +183,34 @@ class RTFParser(object):
 	# Reset the current state's formatting attributes to their default values.
 	def __resetStateFormattingAttributes(self, doCallback = True):
 
-		formerState = self.getFullState()
+		formerState = self.__fullStateCache
 
 		for attribute in self.__stateFormattingAttributes.keys():
 			self.__curState[attribute] = self.__stateFormattingAttributes[attribute]
 
+		# Update the full state cache now that the attributes have changed
+		self.__cacheFullState()
+
 		if doCallback and 'onStateChange' in self.__options['callbacks']:
-			self.__options['callbacks']['onStateChange'](self, formerState, self.getFullState())
+			self.__options['callbacks']['onStateChange'](self, formerState, self.__fullStateCache)
 
 	###########################################################################
 
-	# Sets a styling attribute (bold, italic, etc.) Boolean values like italic,
-	# bold, etc. should be set to True or False. Not doing so will result in
-	# undefined behavior.
-	def __setStateFormattingAttribute(self, attribute, value):
+	# Sets a state value. Styling attributes (bold, italic, etc.) should trigger
+	# the onStateChange event. Boolean styling values like italic, bold, etc.
+	# should be set to True or False. Not doing so will result in undefined
+	# behavior. State values that are used internally and that don't effect the
+	# output can be set to whatever you want and should not trigger onStateChange.
+	def __setStateValue(self, attribute, value, triggerOnStateChange = True):
 
-		oldState = self.getFullState()
+		oldState = self.__fullStateCache
 		self.__curState[attribute] = value
 
-		if 'onStateChange' in self.__options['callbacks']:
-			self.__options['callbacks']['onStateChange'](self, oldState, self.getFullState())
+		# Update the full state cache now that the attribute has changed
+		self.__cacheFullState()
+
+		if triggerOnStateChange and 'onStateChange' in self.__options['callbacks']:
+			self.__options['callbacks']['onStateChange'](self, oldState, self.__fullStateCache)
 
 	###########################################################################
 
@@ -240,7 +260,7 @@ class RTFParser(object):
 	# value should be identical to whatever's specified in \blipuid.
 	def __parseImageID(self, hexval):
 
-		self.__curState['blipUID'] = int(hexval.lstrip('0'), 16)
+		self.__setStateValue('blipUID', int(hexval.lstrip('0'), 16), False)
 
 	###########################################################################
 
@@ -251,7 +271,7 @@ class RTFParser(object):
 		# with the \* prefix, we know we're done parsing the parts of \fldinst
 		# we care about (this will change as I handle more of the RTF spec.)
 		if '\\*' == word and 'inFieldinst' in self.__curState and self.__curState['inFieldinst']:
-			self.__curState['inFieldinst'] = False
+			self.__setStateValue('inFieldinst', False, False)
 
 		################################################
 		#       Part 1. Destinations and fields        #
@@ -261,12 +281,12 @@ class RTFParser(object):
 		if '\*' == self.__prevToken[1] and word == '\\generator':
 			# TODO
 			#self.__parseGenerator()
-			self.__curState['groupSkip'] = True
+			self.__setStateValue('groupSkip', True, False)
 
 		# Proprietary to LibreOffice / OpenOffice, and I can't even find
 		# documentation for what it's supposed to do, so just skip over it.
 		elif '\*' == self.__prevToken[1] and word == '\\pgdsctbl':
-			self.__curState['groupSkip'] = True
+			self.__setStateValue('groupSkip', True, False)
 
 		# Skip over these sections. We're not going to use them (at least
 		# for now.)
@@ -283,21 +303,21 @@ class RTFParser(object):
 			word == '\\generator' or
 			word == '\\info' # TODO: parse this into document attributes
 		):
-			self.__curState['groupSkip'] = True
+			self.__setStateValue('groupSkip', True, False)
 
 		# Beginning of a field
 		elif self.TokenType.OPEN_BRACE == self.__prevToken[0] and '\\field' == word:
-			self.__curState['inField'] = True
+			self.__setStateValue('inField', True, False)
 
 		# Most recent calculated result of field. In practice, this is also
 		# the text that would be parsed into the paragraph by an RTF reader
 		# that doesn't understand fields.
 		elif self.TokenType.OPEN_BRACE == self.__prevToken[0] and '\\fldrslt' == word:
-			self.__curState['inFieldrslt'] = True
+			self.__setStateValue('inFieldrslt', True, False)
 
 		# Field instruction
 		elif '\\*' == self.__prevToken[1] and '\\fldinst' == word:
-				self.__curState['inFieldinst'] = True
+			self.__setStateValue('inFieldinst', True, False)
 
 		################################################
 		#           Part 2. Embedded Images            #
@@ -305,8 +325,8 @@ class RTFParser(object):
 
 		# We've entered an embedded image.
 		elif self.TokenType.OPEN_BRACE == self.__prevToken[0] and '\\pict' == word:
-			self.__curState['inPict'] = True
-			self.__curState['pictAttributes'] = {}
+			self.__setStateValue('inPict', True, False)
+			self.__setStateValue('pictAttributes', {}, False)
 
 		# We'll encounter this destination when parsing images. It's a way to
 		# uniquely identify the image. In my experience with test data, blipuid
@@ -315,15 +335,15 @@ class RTFParser(object):
 
 			# We already got the ID in a simpler way, so we can skip over this destination
 			if 'blipUID' in self.__curState:
-				self.__curState['groupSkip'] = True
+				self.__setStateValue('groupSkip', True, False)
 
 			# We haven't gotten the ID yet, so go ahead and parse this destination
 			else:
-				self.__curState['inBlipUID'] = True
+				self.__setStateValue('inBlipUID', True, False)
 
 		# This is the other (easier) way to uniquely identify an image
 		elif '\\bliptag' == word:
-			self.__curState['blipUID'] = int(param, 10)
+			self.__setStateValue('blipUID', int(param, 10), False)
 
 		# Various image formatting parameters and metadata
 		elif 'pictAttributes' in self.__curState and word in [
@@ -357,39 +377,55 @@ class RTFParser(object):
 			                  # next multiple of 16 greater than or equal to the
 			                  # \picw (bitmap width in pixels) value.
 		]:
-			self.__curState['pictAttributes'][word] = int(param, 10)
+			pictAttributes = self.__curState['pictAttributes']
+			pictAttributes[word] = int(param, 10)
+			self.__setStateValue('pictAttributes', pictAttributes, False)
 
 		# JPG
 		elif 'pictAttributes' in self.__curState and '\\jpegblip' == word:
-			self.__curState['pictAttributes']['source'] = 'jpeg'
+			pictAttributes = self.__curState['pictAttributes']
+			pictAttributes['source'] = 'jpeg'
+			self.__setStateValue('pictAttributes', pictAttributes, False)
 
 		# PNG
 		elif 'pictAttributes' in self.__curState and '\\pngblip' == word:
-			self.__curState['pictAttributes']['source'] = 'png'
+			pictAttributes = self.__curState['pictAttributes']
+			pictAttributes['source'] = 'png'
+			self.__setStateValue('pictAttributes', pictAttributes, False)
 
 		# EMF (Enhanced metafile)
 		elif 'pictAttributes' in self.__curState and '\\emfblip' == word:
-			self.__curState['pictAttributes']['source'] = 'emf'
+			pictAttributes = self.__curState['pictAttributes']
+			pictAttributes['source'] = 'emf'
+			self.__setStateValue('pictAttributes', pictAttributes, False)
 
 		# OS/2 metafile
 		elif 'pictAttributes' in self.__curState and '\\pmmetafile' == word:
-			self.__curState['pictAttributes']['source'] = 'os2meta'
-			self.__curState['pictAttributes']['metafileType'] = param
+			pictAttributes = self.__curState['pictAttributes']
+			pictAttributes['source'] = 'os2meta'
+			pictAttributes['metafileType'] = param
+			self.__setStateValue('pictAttributes', pictAttributes, False)
 
 		# Windows metafile
 		elif 'pictAttributes' in self.__curState and '\\wmetafile' == word:
-			self.__curState['pictAttributes']['source'] = 'winmeta'
-			self.__curState['pictAttributes']['metafileMappingMode'] = param
+			pictAttributes = self.__curState['pictAttributes']
+			pictAttributes['source'] = 'winmeta'
+			pictAttributes['metafileMappingMode'] = param
+			self.__setStateValue('pictAttributes', pictAttributes, False)
 
 		# Windows device-independent bitmap
 		elif 'pictAttributes' in self.__curState and '\\dibitmap' == word:
-			self.__curState['pictAttributes']['source'] = 'wdibmp'
-			self.__curState['pictAttributes']['bitmapType'] = param
+			pictAttributes = self.__curState['pictAttributes']
+			pictAttributes['source'] = 'wdibmp'
+			pictAttributes['bitmapType'] = param
+			self.__setStateValue('pictAttributes', pictAttributes, False)
 
 		# Windows device-dependent bitmap
 		elif 'pictAttributes' in self.__curState and '\\wbitmap' == word:
-			self.__curState['pictAttributes']['source'] = 'wddbmp'
-			self.__curState['pictAttributes']['bitmapType'] = param
+			pictAttributes = self.__curState['pictAttributes']
+			pictAttributes['source'] = 'wddbmp'
+			pictAttributes['bitmapType'] = param
+			self.__setStateValue('pictAttributes', pictAttributes, False)
 
 		################################################
 		#      Part 3. Escaped special characters      #
@@ -518,22 +554,22 @@ class RTFParser(object):
 
 		# Paragraph alignment
 		elif '\\ql' == word:
-			self.__setStateFormattingAttribute('alignment', 'left')
+			self.__setStateValue('alignment', 'left')
 
 		elif '\\qr' == word:
-			self.__setStateFormattingAttribute('alignment', 'right')
+			self.__setStateValue('alignment', 'right')
 
 		elif '\\qc' == word:
-			self.__setStateFormattingAttribute('alignment', 'center')
+			self.__setStateValue('alignment', 'center')
 
 		elif '\\qd' == word:
-			self.__setStateFormattingAttribute('alignment', 'distributed')
+			self.__setStateValue('alignment', 'distributed')
 
 		elif '\\qj' == word:
-			self.__setStateFormattingAttribute('alignment', 'justified')
+			self.__setStateValue('alignment', 'justified')
 
 		elif '\\qt' == word:
-			self.__setStateFormattingAttribute('alignment', 'thai-distributed')
+			self.__setStateValue('alignment', 'thai-distributed')
 
 		# TODO: how do I want to handle \qkN alignment? Will require setting
 		# two attributes.
@@ -541,30 +577,30 @@ class RTFParser(object):
 		# Italic
 		elif '\\i' == word:
 			if param is None or '1' == param:
-				self.__setStateFormattingAttribute('italic', True)
+				self.__setStateValue('italic', True)
 			else:
-				self.__setStateFormattingAttribute('italic', False)
+				self.__setStateValue('italic', False)
 
 		# Bold
 		elif '\\b' == word:
 			if param is None or '1' == param:
-				self.__setStateFormattingAttribute('bold', True)
+				self.__setStateValue('bold', True)
 			else:
-				self.__setStateFormattingAttribute('bold', False)
+				self.__setStateValue('bold', False)
 
 		# Underline
 		elif '\\ul' == word:
 			if param is None or '1' == param:
-				self.__setStateFormattingAttribute('underline', True)
+				self.__setStateValue('underline', True)
 			else:
-				self.__setStateFormattingAttribute('underline', False)
+				self.__setStateValue('underline', False)
 
 		# Strike-through
 		elif '\\strike' == word:
 			if param is None or '1' == param:
-				self.__setStateFormattingAttribute('strikethrough', True)
+				self.__setStateValue('strikethrough', True)
 			else:
-				self.__setStateFormattingAttribute('strikethrough', False)
+				self.__setStateValue('strikethrough', False)
 
 	###########################################################################
 
@@ -588,45 +624,22 @@ class RTFParser(object):
 
 	###########################################################################
 
-	# Resets the parser to an initialized state so we can parse another document.
-	def reset(self):
+	# Reset to a default state where all the formatting attributes are turned off.
+	def __initState(self):
 
-		# A string containing the content of an RTF file
-		self.__content = False
+		self.__curState = {}
+		self.__resetStateFormattingAttributes(False)
+		self.__curState['groupSkip'] = False
+		self.__curState['inField'] = False
 
-		# Our current index into self.__content
-		self.__curPos = 0
-
-		# Formatting states at various levels of curly braces
-		self.__stateStack = []
-
-		# The current formatting state
-		self.__curState = False
-
-		# Stores the current token during parsing
-		self.__curToken = False
-
-		# Records the previously retrieved token during parsing
-		self.__prevToken = False
-
-	###########################################################################
-
-	# Returns true if the specified attribute is a formatting attribute and false
-	# if not.
-	def isAttributeFormat(self, attr):
-
-		if attr in self.__stateFormattingAttributes:
-			return True
-		else:
-			return False
+		self.__fullStateCache = self.__curState.copy()
 
 	###########################################################################
 
 	# Crawls up the state stack to fill in any attributes in the current state
-	# that are inherited from a previous state.
-	# TODO: this is really slow and inefficient, according to cProfile. I need
-	# to figure out another way to keep track of this data.
-	def getFullState(self):
+	# that are inherited from a previous state, then caches the result in
+	# self.__fullStateCache.
+	def __cacheFullState(self):
 
 		state = self.__curState.copy()
 
@@ -645,7 +658,51 @@ class RTFParser(object):
 						state[stateVar] = self.__stateStack[i][stateVar]
 						break
 
+		self.__fullStateCache = state
 		return state
+
+	###########################################################################
+
+	# Resets the parser to an initialized state so we can parse another document.
+	def reset(self):
+
+		# A string containing the content of an RTF file
+		self.__content = False
+
+		# Our current index into self.__content
+		self.__curPos = 0
+
+		# Formatting states at various levels of curly braces
+		self.__stateStack = []
+
+		# Values that were set in the current formatting state. To see the full
+		# state, view the contents of self.__fullStateCache (make sure to call 
+		# self.__cacheFullState() whenever the state changes.)
+		self.__curState = False
+
+		# Walking through the state stack to construct a full representation of
+		# the current state is expensive. Therefore, we should only do so once
+		# whenever the state actually changes, then cache the result as long as
+		# the state stays the same so we can refer back to it frequently without
+		# slowing things down. I discovered the need for this after profiling.
+		self.__fullStateCache = False
+
+		# Stores the current token during parsing
+		self.__curToken = False
+
+		# Records the previously retrieved token during parsing
+		self.__prevToken = False
+
+	###########################################################################
+
+	# Returns true if the specified attribute is a formatting attribute and false
+	# if not.
+	def isAttributeFormat(self, attr):
+
+		if attr in self.__stateFormattingAttributes:
+			return True
+		else:
+			return False
 
 	###########################################################################
 
@@ -688,12 +745,9 @@ class RTFParser(object):
 			self.__curToken = self.__getNextToken()
 			self.__prevToken = False
 
-			# Start out with a default state where all the formatting attributes are
+			# Start with a default state where all the formatting attributes are
 			# turned off.
-			self.__curState = {}
-			self.__resetStateFormattingAttributes(False)
-			self.__curState['groupSkip'] = False
-			self.__curState['inField'] = False
+			self.__initState()
 
 			# Open our initial paragraph
 			self.__openParagraph()
@@ -709,8 +763,9 @@ class RTFParser(object):
 				elif self.TokenType.CLOSE_BRACE == self.__curToken[0]:
 
 					oldStateCopy = self.__curState.copy()
-					oldStateFull = self.getFullState() # used in call to onStateChange
+					oldStateFull = self.__fullStateCache # used in call to onStateChange
 					self.__curState = self.__stateStack.pop()
+					self.__cacheFullState() # Update the full state cache
 
 					# If we're not skipping over a group or processing a field, call
 					# the onCloseGroup hook.
@@ -727,7 +782,7 @@ class RTFParser(object):
 						'inPict' not in oldStateCopy or
 						not oldStateCopy['inPict']
 					) and 'onStateChange' in self.__options['callbacks']:
-						self.__options['callbacks']['onStateChange'](self, oldStateFull, self.getFullState())
+						self.__options['callbacks']['onStateChange'](self, oldStateFull, self.__fullStateCache)
 
 					# We just exited a \field group. Process it and then reset the
 					# \field data buffer.
@@ -749,7 +804,7 @@ class RTFParser(object):
 
 				# We could be skipping over something we're not going to use, such
 				# as \fonttbl, \stylesheet, etc.
-				elif not self.getFullState()['groupSkip']:
+				elif not self.__fullStateCache['groupSkip']:
 
 					# We're inside the fldrslt portion of a field. Test for this
 					# and fieldinst before processing control words, because if
@@ -757,15 +812,15 @@ class RTFParser(object):
 					# copy everything verbatim into the string and let the client
 					# worry about passing it back to another instance of the
 					# parser for processing. Hacky? Maybe. But it works.
-					if 'inFieldrslt' in self.getFullState() and self.getFullState()['inFieldrslt']:
+					if 'inFieldrslt' in self.__fullStateCache and self.__fullStateCache['inFieldrslt']:
 						fldRslt += self.__curToken[1]
 
 					# We're inside the \fldinst portion of a field.
-					elif 'inFieldinst' in self.getFullState() and self.getFullState()['inFieldinst']:
+					elif 'inFieldinst' in self.__fullStateCache and self.__fullStateCache['inFieldinst']:
 						fldInst += self.__curToken[1]
 
 					# We're parsing a \blipuid value to identify an image
-					elif 'inBlipUID' in self.getFullState() and self.getFullState()['inBlipUID']:
+					elif 'inBlipUID' in self.__fullStateCache and self.__fullStateCache['inBlipUID']:
 						blipUID += self.__curToken[1]
 
 					# We're executing a control word. Execute this before
@@ -776,13 +831,13 @@ class RTFParser(object):
 						self.__executeControl(tokenParts[0], tokenParts[1])
 
 					# We're parsing a \pict group, which represents an embedded image
-					elif 'inPict' in self.getFullState() and self.getFullState()['inPict'] and not self.__curToken[1].isspace():
+					elif 'inPict' in self.__fullStateCache and self.__fullStateCache['inPict'] and not self.__curToken[1].isspace():
 						pict += self.__curToken[1]
 
 					# Just an ordinary printable character (note that literal
 					# newlines are ignored. Only \line will result in an inserted \n.
 					else:
-						if not self.getFullState()['inField'] and '\n' != self.__curToken[1]:
+						if not self.__fullStateCache['inField'] and '\n' != self.__curToken[1]:
 							self.__appendToCurrentParagraph(self.__curToken[1])
 
 				self.__prevToken = self.__curToken

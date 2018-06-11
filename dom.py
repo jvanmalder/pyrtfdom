@@ -71,7 +71,7 @@ class RTFDOM(object):
 
 			# Any formatting attributes that are turned on in the current state
 			# should be represented by their corresponding DOM elements
-			state = RTFParser.getFullState()
+			state = RTFParser.fullState
 			for attribute in state:
 				if RTFParser.isAttributeFormat(attribute):
 					if type(state[attribute]) == bool:
