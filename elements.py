@@ -84,6 +84,9 @@ class DOMElement(object):
 		if 'rtf' == elemType:
 			return RTFElement()
 
+		elif 'pagebreak' == elemType:
+			return PageBreakElement()
+
 		elif 'text' == elemType:
 			return TextElement()
 
@@ -123,6 +126,19 @@ class RTFElement(DOMElement):
 	def __init__(self):
 
 		super().__init__('rtf')
+
+###############################################################################
+###############################################################################
+
+# Image
+class PageBreakElement(DOMElement):
+
+	def __init__(self):
+
+		super().__init__('pagebreak')
+
+		# Children aren't allowed in a page break node
+		self._children = False
 
 ###############################################################################
 ###############################################################################

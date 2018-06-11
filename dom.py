@@ -60,6 +60,43 @@ class RTFDOM(object):
 	# Initializes the parser callbacks that are used to construct the DOM.
 	def __initParserCallbacks(self):
 
+		# Utility function for the below callbacks that sets up a series of nodes
+		# corresponding to the specified format.
+		def __setFormatNodes(RTFParser, curParNode, state):
+
+			for attribute in state:
+				if RTFParser.isAttributeFormat(attribute):
+					if type(state[attribute]) == bool:
+						if state[attribute]:
+							node = elements.DOMElement.getElement(attribute)
+							self.__curNode.appendChild(node)
+							self.__curNode = node
+					else:
+						curParNode.attributes[attribute] = state[attribute]
+
+		#####
+
+		# Inserts a page break into the current paragraph node.
+		def onPageBreak(RTFParser):
+
+			# First, walk up to the current paragraph node
+			while 'para' != self.__curNode.nodeType:
+				self.__curNode = self.__curNode.parent
+
+			# Second, create and append the page break node
+			node = elements.PageBreakElement()
+			self.__curNode.appendChild(node)
+
+			# Finally, restore the current formatting state in the same paragraph
+			# and append to it a new text node.create a new text node to append
+			# any text that might be in the same paragraph.
+			__setFormatNodes(RTFParser, self.__curNode, RTFParser.fullState)
+			textNode = elements.TextElement()
+			self.__curNode.appendChild(textNode)
+			self.__curNode = textNode
+
+		#####
+
 		# Create a new paragraph and apply any styles that apply in the current
 		# state.
 		def onOpenParagraph(RTFParser):
@@ -71,16 +108,7 @@ class RTFDOM(object):
 
 			# Any formatting attributes that are turned on in the current state
 			# should be represented by their corresponding DOM elements
-			state = RTFParser.fullState
-			for attribute in state:
-				if RTFParser.isAttributeFormat(attribute):
-					if type(state[attribute]) == bool:
-						if state[attribute]:
-							node = elements.DOMElement.getElement(attribute)
-							self.__curNode.appendChild(node)
-							self.__curNode = node
-					else:
-						para.attributes[attribute] = state[attribute]
+			__setFormatNodes(RTFParser, para, RTFParser.fullState)
 
 			# Create a text node where we'll append text for the paragraph
 			textNode = elements.TextElement()
@@ -189,11 +217,11 @@ class RTFDOM(object):
 		def onImage(RTFParser, attributes, image):
 
 			# First, walk up to the first non-text node
-			if 'text' == self.__curNode.nodeType:
+			while 'text' == self.__curNode.nodeType:
 				self.__curNode = self.__curNode.parent
 
 			# Second, create and append the image node
-			node = elements.DOMElement.getElement('img')
+			node = elements.ImageElement()
 			node.value = image
 			for attribute in attributes.keys():
 				node.attributes[attribute] = attributes[attribute]
@@ -209,6 +237,7 @@ class RTFDOM(object):
 		#####
 
 		self.__parserCallbacks = {
+			'onPageBreak': onPageBreak,
 			'onOpenParagraph': onOpenParagraph,
 			'onAppendParagraph': onAppendParagraph,
 			'onStateChange': onStateChange,

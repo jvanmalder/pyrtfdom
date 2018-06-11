@@ -158,6 +158,14 @@ class RTFParser(object):
 
 	###########################################################################
 
+	# Inserts a page break into the current paragraph.
+	def __breakPage(self):
+
+		if 'onPageBreak' in self.__options['callbacks']:
+			self.__options['callbacks']['onPageBreak'](self)
+
+	###########################################################################
+
 	# Opens a new paragraph.
 	def __openParagraph(self):
 
@@ -542,6 +550,10 @@ class RTFParser(object):
 		################################################
 		#    Part 5. Misc control words and symbols    #
 		################################################
+
+		# We're inserting a page break into the current paragraph
+		elif '\\page' == word or '\\pagebb' == word:
+			self.__breakPage()
 
 		# We're ending the current paragraph and starting a new one
 		elif '\\par' == word:
