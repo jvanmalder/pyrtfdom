@@ -88,7 +88,7 @@ class RTFDOM(object):
 			self.__curNode.appendChild(node)
 
 			# Finally, restore the current formatting state in the same paragraph
-			# and append to it a new text node.create a new text node to append
+			# and append to it a new text node. Create a new text node to append
 			# any text that might be in the same paragraph.
 			__setFormatNodes(RTFParser, self.__curNode, RTFParser.fullState)
 			textNode = elements.TextElement()
