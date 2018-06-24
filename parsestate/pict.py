@@ -172,7 +172,7 @@ class PictState(ParseState):
 
 	def _parseCharacter(self, token):
 
-		if 'inBlipUID' in self._parser.curState and self._parser.curState['inBlipUID']:
+		if 'inBlipUID' in self._parser._curState and self._parser._curState['inBlipUID']:
 			self.__blipUIDBuffer += token
 
 		elif not token.isspace():

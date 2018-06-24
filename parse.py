@@ -38,21 +38,25 @@ class RTFParser(object):
 
 	###########################################################################
 
-	# Read-only public access to the full state.
+	# Read-only public access to the full state. The deep copy is slow when you
+	# have to hit it a lot, so if that's the case, just access
+	# self._fullStateCache directly and promise to be good and not change
+	# anything O:-)
 	@property
 	def fullState(self):
 
-		# TODO: benchmark with and without copy, and if it's significantly
-		# faster without it, get rid of this. Can try self.__fullStateCache.copy()...
-		return copy.deepcopy(self.__fullStateCache)
+		return copy.deepcopy(self._fullStateCache)
 
 	###########################################################################
 
-	# Read-only public access to the current partial state.
+	# Read-only public access to the current partial state. The deep copy is
+	# slow when you have to hit it a lot, so if that's the case, just access
+	# self._fullStateCache directly and promise to be good and not change
+	# anything O:-)
 	@property
 	def curState(self):
 
-		return copy.deepcopy(self.__curState)
+		return copy.deepcopy(self._curState)
 
 	###########################################################################
 
@@ -81,10 +85,10 @@ class RTFParser(object):
 
 	# Crawls up the state stack to fill in any attributes in the current state
 	# that are inherited from a previous state, then caches the result in
-	# self.__fullStateCache.
+	# self._fullStateCache.
 	def __cacheFullState(self):
 
-		state = self.__curState.copy()
+		state = self._curState.copy()
 
 		for attribute in self.__stateFormattingAttributes.keys():
 			if attribute not in state:
@@ -101,7 +105,7 @@ class RTFParser(object):
 						state[stateVar] = self.__stateStack[i][stateVar]
 						break
 
-		self.__fullStateCache = state
+		self._fullStateCache = state
 		return state
 
 	###########################################################################
@@ -121,17 +125,17 @@ class RTFParser(object):
 	# state.
 	def _pushStateStack(self):
 
-		self.__stateStack.append(self.__curState)
-		self.__curState = {}
+		self.__stateStack.append(self._curState)
+		self._curState = {}
 
 	###########################################################################
 
-	# Pops the last state from the stack and restores self.__curState.
+	# Pops the last state from the stack and restores self._curState.
 	def _popStateStack(self):
 
-		self.__curState = self.__stateStack.pop()
+		self._curState = self.__stateStack.pop()
 		self.__cacheFullState() # Update the full state cache
-		return self.__curState
+		return self._curState
 
 	###########################################################################
 
@@ -174,10 +178,10 @@ class RTFParser(object):
 	# Reset the current state's formatting attributes to their default values.
 	def _resetStateFormattingAttributes(self, doCallback = True):
 
-		formerState = self.__fullStateCache
+		formerState = self._fullStateCache
 
 		for attribute in self.__stateFormattingAttributes.keys():
-			self.__curState[attribute] = self.__stateFormattingAttributes[attribute]
+			self._curState[attribute] = self.__stateFormattingAttributes[attribute]
 
 		# Update the full state cache now that the attributes have changed
 		self.__cacheFullState()
@@ -185,7 +189,7 @@ class RTFParser(object):
 		if doCallback:
 			callback = self._getCallback('onStateChange')
 			if callback:
-				callback(self, formerState, self.__fullStateCache)
+				callback(self, formerState, self._fullStateCache)
 
 	###########################################################################
 
@@ -196,8 +200,8 @@ class RTFParser(object):
 	# output can be set to whatever you want and should not trigger onStateChange.
 	def _setStateValue(self, attribute, value, triggerOnStateChange = True):
 
-		oldState = self.__fullStateCache
-		self.__curState[attribute] = value
+		oldState = self._fullStateCache
+		self._curState[attribute] = value
 
 		# Update the full state cache now that the attribute has changed
 		self.__cacheFullState()
@@ -205,7 +209,7 @@ class RTFParser(object):
 		if triggerOnStateChange:
 			callback = self._getCallback('onStateChange')
 			if callback:
-				callback(self, oldState, self.__fullStateCache)
+				callback(self, oldState, self._fullStateCache)
 
 	###########################################################################
 
@@ -224,9 +228,9 @@ class RTFParser(object):
 	# Reset to a default state where all the formatting attributes are turned off.
 	def _initState(self):
 
-		self.__curState = {}
+		self._curState = {}
 		self._resetStateFormattingAttributes(False)
-		self.__fullStateCache = self.__curState.copy()
+		self._fullStateCache = self._curState.copy()
 
 	###########################################################################
 
@@ -243,16 +247,16 @@ class RTFParser(object):
 		self.__stateStack = []
 
 		# Values that were set in the current formatting state. To see the full
-		# state, view the contents of self.__fullStateCache (make sure to call 
+		# state, view the contents of self._fullStateCache (make sure to call 
 		# self.__cacheFullState() whenever the state changes.)
-		self.__curState = False
+		self._curState = False
 
 		# Walking through the state stack to construct a full representation of
 		# the current state is expensive. Therefore, we should only do so once
 		# whenever the state actually changes, then cache the result as long as
 		# the state stays the same so we can refer back to it frequently without
 		# slowing things down. I discovered the need for this after profiling.
-		self.__fullStateCache = False
+		self._fullStateCache = False
 
 		# Stores the current token during parsing
 		self._curToken = False
