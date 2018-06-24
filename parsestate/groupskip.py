@@ -1,11 +1,14 @@
 # -*- coding: utf-8 -*-
 
+from ..tokentype import TokenType
+from .state import ParseState
+
 class GroupSkipState(ParseState):
 
 	def __init__(self, parser):
 
-		self.parser._setStateValue('groupSkip', True, False)
 		super().__init__(parser)
+		self._parser._setStateValue('groupSkip', True, False)
 
 	###########################################################################
 
@@ -16,7 +19,7 @@ class GroupSkipState(ParseState):
 
 		# Once we've finished skipping over the group, we can stop parsing in
 		# this state.
-		if 'groupSkip' not in self.parser.fullState:
+		if 'groupSkip' not in self._parser.fullState:
 			return False
 		else:
 			return True

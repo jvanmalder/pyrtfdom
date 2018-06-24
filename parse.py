@@ -4,18 +4,10 @@
 # primarily to extract formatted text, but could easily be extended and turned
 # into a general parser in the future.
 
-import binascii
-from enum import Enum
+import binascii, copy
 
 from .parsestate.main import MainState
-
-# Token types
-class TokenType(Enum):
-	OPEN_BRACE        = 1
-	CLOSE_BRACE       = 2
-	CONTROL_WORDORSYM = 3
-	CHARACTER         = 4
-	EOF               = 5
+from .tokentype import TokenType
 
 ###############################################################################
 
@@ -51,8 +43,8 @@ class RTFParser(object):
 	def fullState(self):
 
 		# TODO: benchmark with and without copy, and if it's significantly
-		# faster without it, get rid of this.
-		return self.__fullStateCache.deepcopy()
+		# faster without it, get rid of this. Can try self.__fullStateCache.copy()...
+		return copy.deepcopy(self.__fullStateCache)
 
 	###########################################################################
 
@@ -60,7 +52,7 @@ class RTFParser(object):
 	@property
 	def curState(self):
 
-		return self.__curState.deepcopy()
+		return copy.deepcopy(self.__curState)
 
 	###########################################################################
 
@@ -281,7 +273,7 @@ class RTFParser(object):
 	###########################################################################
 
 	# Enter the default parser state and begin parsing the document.
-	def parse():
+	def parse(self):
 
 		mainState = MainState(self)
 		mainState.parse()

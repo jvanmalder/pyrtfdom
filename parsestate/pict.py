@@ -1,18 +1,21 @@
 # -*- coding: utf-8 -*-
 
+from ..tokentype import TokenType
+from .state import ParseState
+
 class PictState(ParseState):
 
 	def __init__(self, parser):
 
-		self.parser._setStateValue('inPict', True, False)
-		self.parser._setStateValue('pictAttributes', {}, False)
+		super().__init__(parser)
+
+		self._parser._setStateValue('inPict', True, False)
+		self._parser._setStateValue('pictAttributes', {}, False)
 
 		# Initialize image data and ID
 		self.__data = ''
 		self.__blipUIDBuffer = '' # used for parsing integer ID
 		self.__blipUID = False # contains the actual integer ID
-
-		super().__init__(parser)
 
 	###########################################################################
 
@@ -22,14 +25,14 @@ class PictState(ParseState):
 
 		# TODO: data protection access scheme, GGG!
 		if 'onImage' in self.__options['callbacks']:
-			self.__options['callbacks']['onImage'](self.parser, pictAttributes, binascii.unhexlify(self.__data))
+			self.__options['callbacks']['onImage'](self._parser, pictAttributes, binascii.unhexlify(self.__data))
 
 	###########################################################################
 
 	# Look out for when we've finished with the embedded image.
 	def _parseCloseBrace(self):
 
-		oldFullState = self.parser.fullState
+		oldFullState = self._parser.fullState
 		super()._parseCloseBrace(False)
 
 		# We're finished parsing an image ID (other possible source of ID is
@@ -39,7 +42,7 @@ class PictState(ParseState):
 
 		# Once we've finished with the pict group, we can stop parsing in this
 		# state.
-		elif 'inPict' not in self.parser.fullState:
+		elif 'inPict' not in self._parser.fullState:
 			self.__append(oldFullState['pictAttributes'])
 			return False
 		else:
@@ -52,7 +55,7 @@ class PictState(ParseState):
 		# We'll encounter this destination when parsing images. It's a way to
 		# uniquely identify the image. In my experience with test data, blipuid
 		# and bliptagN are different representations of the same value.
-		elif '\\*' == self.parser._prevToken[1] and '\\blipuid' == word:
+		if '\\*' == self._parser._prevToken[1] and '\\blipuid' == word:
 
 			# We already got the ID in a simpler way, so we can skip over this destination
 			if self.__blipUID:
@@ -61,7 +64,7 @@ class PictState(ParseState):
 
 			# We haven't gotten the ID yet, so go ahead and parse this destination
 			else:
-				self.parser._setStateValue('inBlipUID', True, False)
+				self._parser._setStateValue('inBlipUID', True, False)
 
 			return True
 
@@ -71,7 +74,7 @@ class PictState(ParseState):
 			return True
 
 		# Various image formatting parameters and metadata
-		elif 'pictAttributes' in self.parser.curState and word in [
+		elif 'pictAttributes' in self._parser.curState and word in [
 			'\\picscalex',    # Horizontal scaling %
 			'\\picscaley',    # Vertical scaling %
 			'\\piccropl',     # Twips (1/1440 of an inch) to crop off the left
@@ -102,62 +105,62 @@ class PictState(ParseState):
 			                  # next multiple of 16 greater than or equal to the
 			                  # \picw (bitmap width in pixels) value.
 		]:
-			pictAttributes = self.parser.curState['pictAttributes']
+			pictAttributes = self._parser.curState['pictAttributes']
 			pictAttributes[word] = int(param, 10)
-			self.parser._setStateValue('pictAttributes', pictAttributes, False)
+			self._parser._setStateValue('pictAttributes', pictAttributes, False)
 			return True
 
 		# JPG
-		elif 'pictAttributes' in self.parser.curState and '\\jpegblip' == word:
-			pictAttributes = self.parser.curState['pictAttributes']
+		elif 'pictAttributes' in self._parser.curState and '\\jpegblip' == word:
+			pictAttributes = self._parser.curState['pictAttributes']
 			pictAttributes['source'] = 'jpeg'
-			self.parser._setStateValue('pictAttributes', pictAttributes, False)
+			self._parser._setStateValue('pictAttributes', pictAttributes, False)
 			return True
 
 		# PNG
-		elif 'pictAttributes' in self.parser.curState and '\\pngblip' == word:
-			pictAttributes = self.parser.curState['pictAttributes']
+		elif 'pictAttributes' in self._parser.curState and '\\pngblip' == word:
+			pictAttributes = self._parser.curState['pictAttributes']
 			pictAttributes['source'] = 'png'
-			self.parser._setStateValue('pictAttributes', pictAttributes, False)
+			self._parser._setStateValue('pictAttributes', pictAttributes, False)
 			return True
 
 		# EMF (Enhanced metafile)
-		elif 'pictAttributes' in self.parser.curState and '\\emfblip' == word:
-			pictAttributes = self.parser.curState['pictAttributes']
+		elif 'pictAttributes' in self._parser.curState and '\\emfblip' == word:
+			pictAttributes = self._parser.curState['pictAttributes']
 			pictAttributes['source'] = 'emf'
-			self.parser._setStateValue('pictAttributes', pictAttributes, False)
+			self._parser._setStateValue('pictAttributes', pictAttributes, False)
 			return True
 
 		# OS/2 metafile
-		elif 'pictAttributes' in self.parser.curState and '\\pmmetafile' == word:
-			pictAttributes = self.parser.curState['pictAttributes']
+		elif 'pictAttributes' in self._parser.curState and '\\pmmetafile' == word:
+			pictAttributes = self._parser.curState['pictAttributes']
 			pictAttributes['source'] = 'os2meta'
 			pictAttributes['metafileType'] = param
-			self.parser._setStateValue('pictAttributes', pictAttributes, False)
+			self._parser._setStateValue('pictAttributes', pictAttributes, False)
 			return True
 
 		# Windows metafile
-		elif 'pictAttributes' in self.parser.curState and '\\wmetafile' == word:
-			pictAttributes = self.parser.curState['pictAttributes']
+		elif 'pictAttributes' in self._parser.curState and '\\wmetafile' == word:
+			pictAttributes = self._parser.curState['pictAttributes']
 			pictAttributes['source'] = 'winmeta'
 			pictAttributes['metafileMappingMode'] = param
-			self.parser._setStateValue('pictAttributes', pictAttributes, False)
+			self._parser._setStateValue('pictAttributes', pictAttributes, False)
 			return True
 
 		# Windows device-independent bitmap
-		elif 'pictAttributes' in self.parser.curState and '\\dibitmap' == word:
-			pictAttributes = self.parser.curState['pictAttributes']
+		elif 'pictAttributes' in self._parser.curState and '\\dibitmap' == word:
+			pictAttributes = self._parser.curState['pictAttributes']
 			pictAttributes['source'] = 'wdibmp'
 			pictAttributes['bitmapType'] = param
-			self.parser._setStateValue('pictAttributes', pictAttributes, False)
+			self._parser._setStateValue('pictAttributes', pictAttributes, False)
 			return True
 
 		# Windows device-dependent bitmap
-		elif 'pictAttributes' in self.parser.curState and '\\wbitmap' == word:
-			pictAttributes = self.parser.curState['pictAttributes']
+		elif 'pictAttributes' in self._parser.curState and '\\wbitmap' == word:
+			pictAttributes = self._parser.curState['pictAttributes']
 			pictAttributes['source'] = 'wddbmp'
 			pictAttributes['bitmapType'] = param
-			self.parser._setStateValue('pictAttributes', pictAttributes, False)
+			self._parser._setStateValue('pictAttributes', pictAttributes, False)
 			return True
 
 		else:
@@ -167,7 +170,7 @@ class PictState(ParseState):
 
 	def _parseCharacter(self, token):
 
-		if 'inBlipUID' in self.parser.curState and self.parser.curState['inBlipUID']:
+		if 'inBlipUID' in self._parser.curState and self._parser.curState['inBlipUID']:
 			self.__blipUIDBuffer += token
 
 		elif not token.isspace():

@@ -3,7 +3,7 @@
 import re, time
 from abc import ABCMeta, abstractmethod
 
-from ..parse import TokenType
+from ..tokentype import TokenType
 
 # The parser is modeled loosely on a state machine. When we parse different
 # kinds of groups, we're going to enter different states. The main body of the
@@ -42,47 +42,47 @@ class ParseState(object):
 
 		token = '\\'
 
-		if not self.parser._content[self.parser._curPos].isalpha() and not self.parser._content[self.parser._curPos].isspace():
+		if not self._parser._content[self._parser._curPos].isalpha() and not self._parser._content[self._parser._curPos].isspace():
 
 			# Character represented in \'xx form (if no hexadecimal digit
 			# follows, it will be the responsibility of the parser to treat it
 			# as an unsupported control symbol.)
-			if "'" == self.parser._content[self.parser._curPos]:
-				token = token + self.parser._content[self.parser._curPos]
-				self.parser._curPos = self.parser._curPos + 1
+			if "'" == self._parser._content[self._parser._curPos]:
+				token = token + self._parser._content[self._parser._curPos]
+				self._parser._curPos = self._parser._curPos + 1
 				decimalCount = 0
 				while decimalCount < 2 and (
-					self.parser._content[self.parser._curPos].isdigit() or
-					self.parser._content[self.parser._curPos].upper() in ['A', 'B', 'C', 'D', 'E']
+					self._parser._content[self._parser._curPos].isdigit() or
+					self._parser._content[self._parser._curPos].upper() in ['A', 'B', 'C', 'D', 'E']
 				):
-					token = token + self.parser._content[self.parser._curPos]
-					self.parser._curPos = self.parser._curPos + 1
+					token = token + self._parser._content[self._parser._curPos]
+					self._parser._curPos = self._parser._curPos + 1
 					decimalCount += 1
 
 			# Control symbol
 			else:
-				token = token + self.parser._content[self.parser._curPos]
-				self.parser._curPos = self.parser._curPos + 1
+				token = token + self._parser._content[self._parser._curPos]
+				self._parser._curPos = self._parser._curPos + 1
 
 		# Control word
-		elif self.parser._content[self.parser._curPos].isalpha():
+		elif self._parser._content[self._parser._curPos].isalpha():
 
-			while self.parser._content[self.parser._curPos].isalpha():
-				token = token + self.parser._content[self.parser._curPos]
-				self.parser._curPos = self.parser._curPos + 1
+			while self._parser._content[self._parser._curPos].isalpha():
+				token = token + self._parser._content[self._parser._curPos]
+				self._parser._curPos = self._parser._curPos + 1
 
 			# Control word has a numeric parameter
-			digitIndex = self.parser._curPos
-			if self.parser._content[self.parser._curPos].isdigit() or '-' == self.parser._content[self.parser._curPos]:
-				while self.parser._content[self.parser._curPos].isdigit() or (self.parser._curPos == digitIndex and '-' == self.parser._content[self.parser._curPos]):
-					token = token + self.parser._content[self.parser._curPos]
-					self.parser._curPos = self.parser._curPos + 1
+			digitIndex = self._parser._curPos
+			if self._parser._content[self._parser._curPos].isdigit() or '-' == self._parser._content[self._parser._curPos]:
+				while self._parser._content[self._parser._curPos].isdigit() or (self._parser._curPos == digitIndex and '-' == self._parser._content[self._parser._curPos]):
+					token = token + self._parser._content[self._parser._curPos]
+					self._parser._curPos = self._parser._curPos + 1
 
 			# If there's a single space that serves as a delimiter, the spec says
 			# we should append it to the control word.
-			if self.parser._content[self.parser._curPos].isspace():
-				token = token + self.parser._content[self.parser._curPos]
-				self.parser._curPos = self.parser._curPos + 1
+			if self._parser._content[self._parser._curPos].isspace():
+				token = token + self._parser._content[self._parser._curPos]
+				self._parser._curPos = self._parser._curPos + 1
 
 		else:
 			raise ValueError("Encountered unescaped '\\'")
@@ -95,16 +95,16 @@ class ParseState(object):
 	def _getNextToken(self):
 
 		# We haven't opened an RTF yet
-		if not self.parser._content:
+		if not self._parser._content:
 			return False
 
 		# We've reached the end of the file
-		elif self.parser._curPos >= len(self.parser._content):
+		elif self._parser._curPos >= len(self._parser._content):
 			return [TokenType.EOF, '']
 
 		# Control words and their parameters count as single tokens
-		elif '\\' == self.parser._content[self.parser._curPos]:
-			self.parser._curPos = self.parser._curPos + 1
+		elif '\\' == self._parser._content[self._parser._curPos]:
+			self._parser._curPos = self._parser._curPos + 1
 			return [TokenType.CONTROL_WORDORSYM, self._getControlWordOrSymbol()]
 
 		# Covers '{', '}' and any other character
@@ -112,13 +112,13 @@ class ParseState(object):
 
 			tokenType = TokenType.CHARACTER
 
-			if '{' == self.parser._content[self.parser._curPos]:
+			if '{' == self._parser._content[self._parser._curPos]:
 				tokenType = TokenType.OPEN_BRACE
-			elif '}' == self.parser._content[self.parser._curPos]:
+			elif '}' == self._parser._content[self._parser._curPos]:
 				tokenType = TokenType.CLOSE_BRACE
 
-			self.parser._curPos = self.parser._curPos + 1
-			return [tokenType, self.parser._content[self.parser._curPos - 1]]
+			self._parser._curPos = self._parser._curPos + 1
+			return [tokenType, self._parser._content[self._parser._curPos - 1]]
 
 	###########################################################################
 
@@ -130,7 +130,7 @@ class ParseState(object):
 	# call to self.parse().
 	def _parseOpenBrace(self):
 
-		self.parser._pushStateStack()
+		self._parser._pushStateStack()
 		return True
 
 	###########################################################################
@@ -144,13 +144,13 @@ class ParseState(object):
 	# should return from the current call to self.parse().
 	def _parseCloseBrace(self, callOnStateChange = True):
 
-		oldStateCopy = self.parser.curState
-		oldStateFull = self.parser.fullState # used in call to onStateChange
-		self.parser._popStateStack()
+		oldStateCopy = self._parser.curState
+		oldStateFull = self._parser.fullState # used in call to onStateChange
+		self._parser._popStateStack()
 
 		#: TODO: factor out this callback call and give it proper data protections
 		if callOnStateChange and 'onStateChange' in self.__options['callbacks']:
-			self.parser.__options['callbacks']['onStateChange'](self.parser, oldStateFull, self.parser.fullState)
+			self._parser.__options['callbacks']['onStateChange'](self._parser, oldStateFull, self._parser.fullState)
 
 		return True
 
@@ -167,14 +167,14 @@ class ParseState(object):
 		#          Escaped special characters          #
 		################################################
 
-		elif '\\\\' == word:
-			self.parser._appendToCurrentParagraph('\\')
+		if '\\\\' == word:
+			self._parser._appendToCurrentParagraph('\\')
 
 		elif '\\{' == word:
-			self.parser._appendToCurrentParagraph('{')
+			self._parser._appendToCurrentParagraph('{')
 
 		elif '\\}' == word:
-			self.parser._appendToCurrentParagraph('}')
+			self._parser._appendToCurrentParagraph('}')
 
 		################################################
 		#     Unicode and other special Characters     #
@@ -182,73 +182,73 @@ class ParseState(object):
 
 		# Non-breaking space
 		elif '\\~' == word:
-			self.parser._appendToCurrentParagraph('\N{NO-BREAK SPACE}')
+			self._parser._appendToCurrentParagraph('\N{NO-BREAK SPACE}')
 
 		# Non-breaking hyphen
 		elif '\\_' == word:
-			self.parser._appendToCurrentParagraph('\N{NON-BREAKING HYPHEN}')
+			self._parser._appendToCurrentParagraph('\N{NON-BREAKING HYPHEN}')
 
 		# A space character with the width of the letter 'm' in the current font
 		elif '\\emspace' == word:
-			self.parser._appendToCurrentParagraph('\N{EM SPACE}')
+			self._parser._appendToCurrentParagraph('\N{EM SPACE}')
 
 		# A space character with the width of the letter 'n' in the current font
 		elif '\\enspace' == word:
-			self.parser._appendToCurrentParagraph('\N{EN SPACE}')
+			self._parser._appendToCurrentParagraph('\N{EN SPACE}')
 
 		# En dash
 		elif '\\endash' == word:
-			self.parser._appendToCurrentParagraph('\N{EN DASH}')
+			self._parser._appendToCurrentParagraph('\N{EN DASH}')
 
 		# Em dash
 		elif '\\emdash' == word:
-			self.parser._appendToCurrentParagraph('\N{EM DASH}')
+			self._parser._appendToCurrentParagraph('\N{EM DASH}')
 
 		# Left single quote
 		elif '\\lquote' == word:
-			self.parser._appendToCurrentParagraph('\N{LEFT SINGLE QUOTATION MARK}')
+			self._parser._appendToCurrentParagraph('\N{LEFT SINGLE QUOTATION MARK}')
 
 		# Right single quote
 		elif '\\rquote' == word:
-			self.parser._appendToCurrentParagraph('\N{RIGHT SINGLE QUOTATION MARK}')
+			self._parser._appendToCurrentParagraph('\N{RIGHT SINGLE QUOTATION MARK}')
 
 		# Left double quote
 		elif '\\ldblquote' == word:
-			self.parser._appendToCurrentParagraph('\N{LEFT DOUBLE QUOTATION MARK}')
+			self._parser._appendToCurrentParagraph('\N{LEFT DOUBLE QUOTATION MARK}')
 
 		# Right double quote
 		elif '\\rdblquote' == word:
-			self.parser._appendToCurrentParagraph('\N{RIGHT DOUBLE QUOTATION MARK}')
+			self._parser._appendToCurrentParagraph('\N{RIGHT DOUBLE QUOTATION MARK}')
 
 		# Non-paragraph-breaking line break
 		elif '\\line' == word:
-			self.parser._appendToCurrentParagraph('\n')
+			self._parser._appendToCurrentParagraph('\n')
 
 		# Tab character
 		elif '\\tab' == word:
-			self.parser._appendToCurrentParagraph('\t')
+			self._parser._appendToCurrentParagraph('\t')
 
 		# tab
 		elif '\\bullet' == word:
-			self.parser._appendToCurrentParagraph('\N{BULLET}')
+			self._parser._appendToCurrentParagraph('\N{BULLET}')
 
 		# Current date (long form)
 		elif '\\chdate' == word or '\\chdpl' == word:
-			self.parser._appendToCurrentParagraph(time.strftime("%A, %B %d, %Y"))
+			self._parser._appendToCurrentParagraph(time.strftime("%A, %B %d, %Y"))
 
 		# Current date (abbreviated form)
 		elif '\\chdpa' == word:
-			self.parser._appendToCurrentParagraph(time.strftime("%m/%d/%Y"))
+			self._parser._appendToCurrentParagraph(time.strftime("%m/%d/%Y"))
 
 		# Current date (abbreviated form)
 		elif '\\chtime' == word:
-			self.parser._appendToCurrentParagraph(time.strftime("%I:%M:%S %p"))
+			self._parser._appendToCurrentParagraph(time.strftime("%I:%M:%S %p"))
 
 		# A character of the form \uXXX to be added to the current paragraph.
 		# Unlike \'XX, \u takes a decimal number instead of hex.
 		elif '\\u' == word and param:
 			try:
-				self.parser._appendToCurrentParagraph(chr(int(param, 10)))
+				self._parser._appendToCurrentParagraph(chr(int(param, 10)))
 			except ValueError:
 				return
 
@@ -258,7 +258,7 @@ class ParseState(object):
 			try:
 
 				charCode = int(param, 16)
-				prevTokenParts = self.__splitControlWord(self.parser._prevToken)
+				prevTokenParts = self.__splitControlWord(self._parser._prevToken)
 
 				# Per the RTF standard, if a \uXXX unicode symbol has an ANSI
 				# equivalent, the ANSI character will be encoded directly
@@ -270,7 +270,7 @@ class ParseState(object):
 				# we do a bounds check here and ignore the character if it falls
 				# out of bounds.
 				if '\\u' != prevTokenParts[0] and charCode <= 255:
-					self.parser._appendToCurrentParagraph(chr(charCode))
+					self._parser._appendToCurrentParagraph(chr(charCode))
 
 			except ValueError:
 				return
@@ -294,22 +294,22 @@ class ParseState(object):
 
 		# Paragraph alignment
 		elif '\\ql' == word:
-			self.parser._setStateValue('alignment', 'left')
+			self._parser._setStateValue('alignment', 'left')
 
 		elif '\\qr' == word:
-			self.parser._setStateValue('alignment', 'right')
+			self._parser._setStateValue('alignment', 'right')
 
 		elif '\\qc' == word:
-			self.parser._setStateValue('alignment', 'center')
+			self._parser._setStateValue('alignment', 'center')
 
 		elif '\\qd' == word:
-			self.parser._setStateValue('alignment', 'distributed')
+			self._parser._setStateValue('alignment', 'distributed')
 
 		elif '\\qj' == word:
-			self.parser._setStateValue('alignment', 'justified')
+			self._parser._setStateValue('alignment', 'justified')
 
 		elif '\\qt' == word:
-			self.parser._setStateValue('alignment', 'thai-distributed')
+			self._parser._setStateValue('alignment', 'thai-distributed')
 
 		# TODO: how do I want to handle \qkN alignment? Will require setting
 		# two attributes.
@@ -317,30 +317,30 @@ class ParseState(object):
 		# Italic
 		elif '\\i' == word:
 			if param is None or '1' == param:
-				self.parser._setStateValue('italic', True)
+				self._parser._setStateValue('italic', True)
 			else:
-				self.parser._setStateValue('italic', False)
+				self._parser._setStateValue('italic', False)
 
 		# Bold
 		elif '\\b' == word:
 			if param is None or '1' == param:
-				self.parser._setStateValue('bold', True)
+				self._parser._setStateValue('bold', True)
 			else:
-				self.parser._setStateValue('bold', False)
+				self._parser._setStateValue('bold', False)
 
 		# Underline
 		elif '\\ul' == word:
 			if param is None or '1' == param:
-				self.parser._setStateValue('underline', True)
+				self._parser._setStateValue('underline', True)
 			else:
-				self.parser._setStateValue('underline', False)
+				self._parser._setStateValue('underline', False)
 
 		# Strike-through
 		elif '\\strike' == word:
 			if param is None or '1' == param:
-				self.parser._setStateValue('strikethrough', True)
+				self._parser._setStateValue('strikethrough', True)
 			else:
-				self.parser._setStateValue('strikethrough', False)
+				self._parser._setStateValue('strikethrough', False)
 
 		return True
 
@@ -358,47 +358,46 @@ class ParseState(object):
 	# Parse the RTF and return an array of formatted paragraphs.
 	def parse(self):
 
-		if self.parser._content:
+		if self._parser._content:
 
-			self.parser._curToken = self._getNextToken()
-			self.parser._prevToken = False
+			self._parser._curToken = self._getNextToken()
+			self._parser._prevToken = False
 
 			# Start with a default state where all the formatting attributes are
 			# turned off.
-			self._initState()
+			self._parser._initState()
 
 			# Open our initial paragraph
-			self._openParagraph()
+			self._parser._openParagraph()
 
 			# If this gets set to true, it means we're inside a nested call
 			# to parse and that we've been told to return.
 			returnFromCall = False
 
-			while !returnFromCall and TokenType.EOF != self.parser._curToken[0]:
+			while not returnFromCall and TokenType.EOF != self._parser._curToken[0]:
 
-				if TokenType.OPEN_BRACE == self.parser._curToken[0]:
-					if (!self._parseOpenBrace()):
+				if TokenType.OPEN_BRACE == self._parser._curToken[0]:
+					if not self._parseOpenBrace():
 						returnFromCall = True
 
 				# Restore the previous state.
-				elif TokenType.CLOSE_BRACE == self.parser._curToken[0]:
-					if (!self._parseCloseBrace()):
+				elif TokenType.CLOSE_BRACE == self._parser._curToken[0]:
+					if not self._parseCloseBrace():
 						returnFromCall = True
 
 				# We're executing a control word. Execute this before
 				# appending tokens to any special destination or group that
 				# might contain control words.
-				elif TokenType.CONTROL_WORDORSYM == self.parser._curToken[0]:
-					tokenParts = self.__splitControlWord(self.parser._curToken)
-					if (!self._parseControl(tokenParts[0], tokenParts[1])):
+				elif TokenType.CONTROL_WORDORSYM == self._parser._curToken[0]:
+					tokenParts = self.__splitControlWord(self._parser._curToken)
+					if not self._parseControl(tokenParts[0], tokenParts[1]):
 						returnFromCall = True
 
 				# Just an ordinary printable character (note that literal
 				# newlines are ignored. Only \line will result in an inserted \n.
-				else:
-					if (!self._parseCharacter(self.parser._curToken[1])):
+				elif not self._parseCharacter(self._parser._curToken[1]):
 						returnFromCall = True
 
-				self.parser._prevToken = self.parser._curToken
-				self.parser._curToken = self._getNextToken()
+				self._parser._prevToken = self._parser._curToken
+				self._parser._curToken = self._getNextToken()
 

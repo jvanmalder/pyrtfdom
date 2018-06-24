@@ -1,16 +1,19 @@
 # -*- coding: utf-8 -*-
 
+from ..tokentype import TokenType
+from .state import ParseState
+
 class FieldState(ParseState):
 
 	def __init__(self, parser):
 
-		self.parser._setStateValue('inField', True, False)
+		super().__init__(parser)
+
+		self._parser._setStateValue('inField', True, False)
 
 		# Initialize the two components of a field
 		self.__fldRslt = ''
 		self.__fldInst = ''
-
-		super().__init__(parser)
 
 	###########################################################################
 
@@ -20,12 +23,12 @@ class FieldState(ParseState):
 		# We let the callback handle it
 		# TODO: make data-protected-safe way to call this callback
 		if 'onField' in self.__options['callbacks']:
-			self.parser.__options['callbacks']['onField'](self.parser, self.__fldinst, self.__fldrslt)
+			self._parser.__options['callbacks']['onField'](self._parser, self.__fldinst, self.__fldrslt)
 
 		# There's no callback that knows how to handle it, so we'll just do things
 		# the dumb way by appending the \fldrslt value to the current paragraph.
 		else:
-			self.parser._appendToCurrentParagraph(self.__fldrslt)
+			self._parser._appendToCurrentParagraph(self.__fldrslt)
 
 	###########################################################################
 
@@ -36,7 +39,7 @@ class FieldState(ParseState):
 
 		# Once we've finished with the field group, we can stop parsing in this
 		# state.
-		if 'inField' not in self.parser.fullState:
+		if 'inField' not in self._parser.fullState:
 			self.__append()
 			return False
 		else:
@@ -50,19 +53,19 @@ class FieldState(ParseState):
 		# with the \* prefix, we know we're done parsing the parts of \fldinst
 		# we care about (this will change as I handle more of the RTF spec.)
 		if '\\*' == word and 'inFieldinst' in self.__curState and self.__curState['inFieldinst']:
-			self.parser._setStateValue('inFieldinst', False, False)
+			self._parser._setStateValue('inFieldinst', False, False)
 			return True
 
 		# Most recent calculated result of field. In practice, this is also
 		# the text that would be parsed into the paragraph by an RTF reader
 		# that doesn't understand fields.
-		elif TokenType.OPEN_BRACE == self.parser._prevToken[0] and '\\fldrslt' == word:
-			self.parser._setStateValue('inFieldrslt', True, False)
+		elif TokenType.OPEN_BRACE == self._parser._prevToken[0] and '\\fldrslt' == word:
+			self._parser._setStateValue('inFieldrslt', True, False)
 			return True
 
 		# Field instruction
-		elif '\\*' == self.parser._prevToken[1] and '\\fldinst' == word:
-			self.parser._setStateValue('inFieldinst', True, False)
+		elif '\\*' == self._parser._prevToken[1] and '\\fldinst' == word:
+			self._parser._setStateValue('inFieldinst', True, False)
 			return True
 
 		else:
@@ -72,9 +75,9 @@ class FieldState(ParseState):
 
 	def _parseCharacter(self, token):
 
-		if 'inFieldrslt' in self.parser.fullState and self.parser.fullState['inFieldrslt']:
+		if 'inFieldrslt' in self._parser.fullState and self._parser.fullState['inFieldrslt']:
 			self.__fldRslt += token
 
-		elif 'inFieldinst' in self.parser.fullState and self.parser.fullState['inFieldinst']:
+		elif 'inFieldinst' in self._parser.fullState and self._parser.fullState['inFieldinst']:
 			self.self.__fldInst += token
 
