@@ -362,7 +362,6 @@ class ParseState(object):
 		if self._parser._content:
 
 			self._parser._curToken = self._getNextToken()
-			self._parser._prevToken = False
 
 			# If this gets set to true, it means we're inside a nested call
 			# to parse and that we've been told to return.

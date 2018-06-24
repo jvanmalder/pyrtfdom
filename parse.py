@@ -301,6 +301,10 @@ class RTFParser(object):
 		# Open our initial paragraph
 		self._openParagraph()
 
+		# Initialize markers representing our current place in the document
+		self._curToken = False
+		self._prevToken = False
+
 		# Begin parsing
 		mainState = MainState(self)
 		mainState.parse()

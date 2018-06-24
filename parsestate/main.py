@@ -12,26 +12,42 @@ class MainState(ParseState):
 	def _parseControl(self, word, param):
 
 		if (
-			# We'll treat the value of \*\generator as a document attribute.
+			# TODO: We'll treat the value of \*\generator as a document attribute.
 			'\*' == self._parser._prevToken[1] and word == '\\generator'
 		) or (
 			# Proprietary to LibreOffice / OpenOffice, and I can't even find
 			# documentation for what it's supposed to do, so just skip over it.
 			'\*' == self._parser._prevToken[1] and word == '\\pgdsctbl'
 		) or (
+			# Math properties. For now, we're skipping over this.
+			'\*' == self._parser._prevToken[1] and word == '\\mmathPr'
+		) or (
+			# User-defined document properties. For now, we're skipping over
+			# this too.
+			'\*' == self._parser._prevToken[1] and word == '\\userprops'
+		) or (
+			# Revision tracking. Not going to deal with this.
+			'\*' == self._parser._prevToken[1] and word == '\\revtbl'
+		) or (
+			# A newer form of revision tracking.
+			'\*' == self._parser._prevToken[1] and word == '\\rsidtbl'
+		) or (
+			# Only exists when a document contains subdocuments. Not going to
+			# deal with this.
+			'\*' == self._parser._prevToken[1] and word == '\\filetbl'
+		) or (
+			# Not going to do anything with lists for now.
+			'\*' == self._parser._prevToken[1] and word == '\\listtable'
+		) or (
+			'\*' == self._parser._prevToken[1] and word == '\\listoverridetable'
+		) or (
 			# Skip over these sections. We're not going to use them (at least
 			# for now.)
 			TokenType.OPEN_BRACE == self._parser._prevToken[0] and (
 				word == '\\fonttbl' or
-				word == '\\filetbl' or
 				word == '\\colortbl' or
 				word == '\\stylesheet'or
-				word == '\\stylerestrictions' or
-				word == '\\listtables' or
-				word == '\\revtbl' or
-				word == '\\rsidtable' or
-				word == '\\mathprops' or
-				word == '\\generator' or
+				word == '\\stylerestrictions' or # Does this even exist...?
 				word == '\\info' # TODO: parse this into document attributes
 			)
 		):
