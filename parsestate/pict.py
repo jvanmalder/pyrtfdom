@@ -170,13 +170,55 @@ class PictState(ParseState):
 
 	###########################################################################
 
+	# This is ordinarily an abstract function and I'm required to implement it,
+	# but it's not actually used because I've overriden self._parse to solve a
+	# significant performance issue.
 	def _parseCharacter(self, token):
 
-		if 'inBlipUID' in self._parser._curState and self._parser._curState['inBlipUID']:
-			self.__blipUIDBuffer += token
-
-		elif not token.isspace():
-			self.__data += token
-
 		return True
+
+	###########################################################################
+
+	# I had to override this because repeated calls to self._parseCharacter
+	# result in terrible performance for even small images. This isn't a
+	# beautiful solution, but it works *really* well. Prepare your nose for a
+	# code smell (this is mostly a cut-and-paste from the ParseState class's
+	# method with the call to self._parseCharacter removed.)
+	def _parse(self):
+
+		if self._parser._content:
+
+			self._parser._curToken = self._getNextToken()
+
+			while TokenType.EOF != self._parser._curToken[0]:
+
+				if TokenType.OPEN_BRACE == self._parser._curToken[0]:
+					if not self._parseOpenBrace():
+						return
+
+				# Restore the previous state.
+				elif TokenType.CLOSE_BRACE == self._parser._curToken[0]:
+					if not self._parseCloseBrace():
+						return
+
+				# We're executing a control word. Execute this before
+				# appending tokens to any special destination or group that
+				# might contain control words.
+				elif TokenType.CONTROL_WORDORSYM == self._parser._curToken[0]:
+					tokenParts = self.__splitControlWord(self._parser._curToken)
+					if not self._parseControl(tokenParts[0], tokenParts[1]):
+						return
+
+				### Begin code that diverges from ParseState.parse() ###
+
+				elif 'inBlipUID' in self._parser._curState and self._parser._curState['inBlipUID']:
+					self.__blipUIDBuffer += token
+
+				elif not token.isspace():
+					self.__data += token
+
+				###  End code that diverges from ParseState.parse()  ###
+
+				self._parser._prevToken = self._parser._curToken
+				self._parser._curToken = self._getNextToken()
 
