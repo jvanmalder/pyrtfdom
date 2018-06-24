@@ -226,9 +226,6 @@ class RTFParser(object):
 
 		self.__curState = {}
 		self._resetStateFormattingAttributes(False)
-		self.__curState['groupSkip'] = False
-		self.__curState['inField'] = False
-
 		self.__fullStateCache = self.__curState.copy()
 
 	###########################################################################
@@ -297,6 +294,14 @@ class RTFParser(object):
 	# Enter the default parser state and begin parsing the document.
 	def parse(self):
 
+		# Start with a default state where all the formatting attributes are
+		# turned off.
+		self._initState()
+
+		# Open our initial paragraph
+		self._openParagraph()
+
+		# Begin parsing
 		mainState = MainState(self)
 		mainState.parse()
 

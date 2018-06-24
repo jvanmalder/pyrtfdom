@@ -8,7 +8,6 @@ class FieldState(ParseState):
 	def __init__(self, parser):
 
 		super().__init__(parser)
-
 		self._parser._setStateValue('inField', True, False)
 
 		# Initialize the two components of a field

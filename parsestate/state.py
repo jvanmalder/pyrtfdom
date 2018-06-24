@@ -282,16 +282,16 @@ class ParseState(object):
 
 		# We're inserting a page break into the current paragraph
 		elif '\\page' == word or '\\pagebb' == word:
-			self._breakPage()
+			self._parser._breakPage()
 
 		# We're ending the current paragraph and starting a new one
 		elif '\\par' == word:
-			self._closeParagraph()
-			self._openParagraph()
+			self._parser._closeParagraph()
+			self._parser._openParagraph()
 
 		# Reset all styling to an off position in the current state
 		elif '\\plain' == word:
-			self._resetStateFormattingAttributes()
+			self._parser._resetStateFormattingAttributes()
 
 		# Paragraph alignment
 		elif '\\ql' == word:
@@ -363,13 +363,6 @@ class ParseState(object):
 
 			self._parser._curToken = self._getNextToken()
 			self._parser._prevToken = False
-
-			# Start with a default state where all the formatting attributes are
-			# turned off.
-			self._parser._initState()
-
-			# Open our initial paragraph
-			self._parser._openParagraph()
 
 			# If this gets set to true, it means we're inside a nested call
 			# to parse and that we've been told to return.

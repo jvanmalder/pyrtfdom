@@ -58,8 +58,8 @@ class MainState(ParseState):
 
 	def _parseCharacter(self, token):
 
-		if '\n' != self._parser._curToken[1]:
-			self._parser._appendToCurrentParagraph(self._parser._curToken[1])
+		if '\n' != token:
+			self._parser._appendToCurrentParagraph(token)
 
 		return True
 
