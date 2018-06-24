@@ -80,3 +80,5 @@ class FieldState(ParseState):
 		elif 'inFieldinst' in self._parser.fullState and self._parser.fullState['inFieldinst']:
 			self.self.__fldInst += token
 
+		return True
+

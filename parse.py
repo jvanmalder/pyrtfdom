@@ -4,7 +4,7 @@
 # primarily to extract formatted text, but could easily be extended and turned
 # into a general parser in the future.
 
-import binascii, copy
+import copy
 
 from .parsestate.main import MainState
 from .tokentype import TokenType

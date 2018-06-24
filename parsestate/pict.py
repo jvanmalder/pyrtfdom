@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+import binascii
+
 from ..tokentype import TokenType
 from .state import ParseState
 
@@ -175,4 +177,6 @@ class PictState(ParseState):
 
 		elif not token.isspace():
 			self.__data += token
+
+		return True
 
