@@ -21,9 +21,9 @@ class FieldState(ParseState):
 	def __append(self):
 
 		# We let the callback handle it
-		# TODO: make data-protected-safe way to call this callback
-		if 'onField' in self.__options['callbacks']:
-			self._parser.__options['callbacks']['onField'](self._parser, self.__fldinst, self.__fldrslt)
+		callback = self._parser._getCallback('onField')
+		if callback:
+			callback(self._parser, self.__fldinst, self.__fldrslt)
 
 		# There's no callback that knows how to handle it, so we'll just do things
 		# the dumb way by appending the \fldrslt value to the current paragraph.

@@ -106,6 +106,17 @@ class RTFParser(object):
 
 	###########################################################################
 
+	# Returns the specified callback function if it exists, or None if it
+	# doesn't.
+	def _getCallback(self, callbackName):
+
+		if callbackName in self.__options['callbacks']:
+			return self.__options['callbacks'][callbackName]
+		else:
+			return None
+
+	###########################################################################
+
 	# Pushes the current state onto the state stack and sets up a new clean
 	# state.
 	def _pushStateStack(self):
@@ -127,30 +138,36 @@ class RTFParser(object):
 	# Inserts a page break into the current paragraph.
 	def _breakPage(self):
 
-		if 'onPageBreak' in self.__options['callbacks']:
-			self.__options['callbacks']['onPageBreak'](self)
+		callback = self._getCallback('onPageBreak')
+		if callback:
+			callback(self)
 
 	###########################################################################
 
 	# Opens a new paragraph.
 	def _openParagraph(self):
 
-		self.__options['callbacks']['onOpenParagraph'](self)
+		callback = self._getCallback('onOpenParagraph')
+		if callback:
+			callback(self)
 
 	###########################################################################
 
 	# Appends the specified string to the current paragraph.
 	def _appendToCurrentParagraph(self, string):
 
-		self.__options['callbacks']['onAppendParagraph'](self, string)
+		callback = self._getCallback('onAppendParagraph')
+		if callback:
+			callback(self, string)
 
 	###########################################################################
 
 	# Closes the current paragraph.
 	def _closeParagraph(self):
 
-		if 'onCloseParagraph' in self.__options['callbacks']:
-			self.__options['callbacks']['onCloseParagraph'](self)
+		callback = self._getCallback('onCloseParagraph')
+		if callback:
+			callback(self)
 
 	###########################################################################
 
@@ -165,8 +182,10 @@ class RTFParser(object):
 		# Update the full state cache now that the attributes have changed
 		self.__cacheFullState()
 
-		if doCallback and 'onStateChange' in self.__options['callbacks']:
-			self.__options['callbacks']['onStateChange'](self, formerState, self.__fullStateCache)
+		if doCallback:
+			callback = self._getCallback('onStateChange')
+			if callback:
+				callback(self, formerState, self.__fullStateCache)
 
 	###########################################################################
 
@@ -183,8 +202,10 @@ class RTFParser(object):
 		# Update the full state cache now that the attribute has changed
 		self.__cacheFullState()
 
-		if triggerOnStateChange and 'onStateChange' in self.__options['callbacks']:
-			self.__options['callbacks']['onStateChange'](self, oldState, self.__fullStateCache)
+		if triggerOnStateChange:
+			callback = self._getCallback('onStateChange')
+			if callback:
+				callback(self, oldState, self.__fullStateCache)
 
 	###########################################################################
 
@@ -194,8 +215,9 @@ class RTFParser(object):
 	# to handle it.
 	def _setDocumentAttribute(self, attribute, value):
 
-		if 'onSetDocumentAttribute' in self.__options['callbacks']:
-			self.__options['callbacks']['onSetDocumentAttribute'](self, attribute, value)
+		callback = self._getCallback('onSetDocumentAttribute')
+		if callback:
+			callback(self, attribute, value)
 
 	###########################################################################
 

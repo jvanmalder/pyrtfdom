@@ -148,9 +148,10 @@ class ParseState(object):
 		oldStateFull = self._parser.fullState # used in call to onStateChange
 		self._parser._popStateStack()
 
-		#: TODO: factor out this callback call and give it proper data protections
-		if callOnStateChange and 'onStateChange' in self.__options['callbacks']:
-			self._parser.__options['callbacks']['onStateChange'](self._parser, oldStateFull, self._parser.fullState)
+		if callOnStateChange:
+			callback = self._parser._getCallback('onStateChange')
+			if callback:
+				callback(self._parser, oldStateFull, self._parser.fullState)
 
 		return True
 

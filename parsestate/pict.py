@@ -23,9 +23,9 @@ class PictState(ParseState):
 	# hex dump format.
 	def __append(self, pictAttributes):
 
-		# TODO: data protection access scheme, GGG!
-		if 'onImage' in self.__options['callbacks']:
-			self.__options['callbacks']['onImage'](self._parser, pictAttributes, binascii.unhexlify(self.__data))
+		callback = self._parser._getCallback('onImage')
+		if callback:
+			callback(self._parser, pictAttributes, binascii.unhexlify(self.__data))
 
 	###########################################################################
 
