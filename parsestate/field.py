@@ -22,12 +22,12 @@ class FieldState(ParseState):
 		# We let the callback handle it
 		callback = self._parser._getCallback('onField')
 		if callback:
-			callback(self._parser, self.__fldinst, self.__fldrslt)
+			callback(self._parser, self.__fldInst, self.__fldRslt)
 
 		# There's no callback that knows how to handle it, so we'll just do things
 		# the dumb way by appending the \fldrslt value to the current paragraph.
 		else:
-			self._parser._appendToCurrentParagraph(self.__fldrslt)
+			self._parser._appendToCurrentParagraph(self.__fldRslt)
 
 	###########################################################################
 
@@ -78,7 +78,7 @@ class FieldState(ParseState):
 			self.__fldRslt += token
 
 		elif 'inFieldinst' in self._parser.fullState and self._parser.fullState['inFieldinst']:
-			self.self.__fldInst += token
+			self.__fldInst += token
 
 		return True
 
