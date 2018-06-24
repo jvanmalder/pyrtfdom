@@ -363,20 +363,16 @@ class ParseState(object):
 
 			self._parser._curToken = self._getNextToken()
 
-			# If this gets set to true, it means we're inside a nested call
-			# to parse and that we've been told to return.
-			returnFromCall = False
-
-			while not returnFromCall and TokenType.EOF != self._parser._curToken[0]:
+			while TokenType.EOF != self._parser._curToken[0]:
 
 				if TokenType.OPEN_BRACE == self._parser._curToken[0]:
 					if not self._parseOpenBrace():
-						returnFromCall = True
+						return
 
 				# Restore the previous state.
 				elif TokenType.CLOSE_BRACE == self._parser._curToken[0]:
 					if not self._parseCloseBrace():
-						returnFromCall = True
+						return
 
 				# We're executing a control word. Execute this before
 				# appending tokens to any special destination or group that
@@ -384,12 +380,12 @@ class ParseState(object):
 				elif TokenType.CONTROL_WORDORSYM == self._parser._curToken[0]:
 					tokenParts = self.__splitControlWord(self._parser._curToken)
 					if not self._parseControl(tokenParts[0], tokenParts[1]):
-						returnFromCall = True
+						return
 
 				# Just an ordinary printable character (note that literal
 				# newlines are ignored. Only \line will result in an inserted \n.
 				elif not self._parseCharacter(self._parser._curToken[1]):
-						returnFromCall = True
+						return
 
 				self._parser._prevToken = self._parser._curToken
 				self._parser._curToken = self._getNextToken()
