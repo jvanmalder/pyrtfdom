@@ -356,7 +356,11 @@ class ParseState(object):
 
 	###########################################################################
 
-	# Parse the RTF and return an array of formatted paragraphs.
+	# Parse the RTF and return an array of formatted paragraphs. TODO: You'll
+	# note that when parsing heavy data (like large embedded images), the
+	# performance of this refactor is significantly worse than the way I'd
+	# implemented it originally due to the high cost of Python's function call
+	# overhead. I'm not sure what to do about this yet...
 	def parse(self):
 
 		if self._parser._content:
