@@ -76,7 +76,7 @@ class PictState(ParseState):
 			return True
 
 		# Various image formatting parameters and metadata
-		elif 'pictAttributes' in self._parser.curState and word in [
+		elif 'pictAttributes' in self._parser._curState and word in [
 			'\\picscalex',    # Horizontal scaling %
 			'\\picscaley',    # Vertical scaling %
 			'\\piccropl',     # Twips (1/1440 of an inch) to crop off the left
@@ -107,59 +107,59 @@ class PictState(ParseState):
 			                  # next multiple of 16 greater than or equal to the
 			                  # \picw (bitmap width in pixels) value.
 		]:
-			pictAttributes = self._parser.curState['pictAttributes']
+			pictAttributes = self._parser._curState['pictAttributes']
 			pictAttributes[word] = int(param, 10)
 			self._parser._setStateValue('pictAttributes', pictAttributes, False)
 			return True
 
 		# JPG
-		elif 'pictAttributes' in self._parser.curState and '\\jpegblip' == word:
-			pictAttributes = self._parser.curState['pictAttributes']
+		elif 'pictAttributes' in self._parser._curState and '\\jpegblip' == word:
+			pictAttributes = self._parser._curState['pictAttributes']
 			pictAttributes['source'] = 'jpeg'
 			self._parser._setStateValue('pictAttributes', pictAttributes, False)
 			return True
 
 		# PNG
-		elif 'pictAttributes' in self._parser.curState and '\\pngblip' == word:
-			pictAttributes = self._parser.curState['pictAttributes']
+		elif 'pictAttributes' in self._parser._curState and '\\pngblip' == word:
+			pictAttributes = self._parser._curState['pictAttributes']
 			pictAttributes['source'] = 'png'
 			self._parser._setStateValue('pictAttributes', pictAttributes, False)
 			return True
 
 		# EMF (Enhanced metafile)
-		elif 'pictAttributes' in self._parser.curState and '\\emfblip' == word:
-			pictAttributes = self._parser.curState['pictAttributes']
+		elif 'pictAttributes' in self._parser._curState and '\\emfblip' == word:
+			pictAttributes = self._parser._curState['pictAttributes']
 			pictAttributes['source'] = 'emf'
 			self._parser._setStateValue('pictAttributes', pictAttributes, False)
 			return True
 
 		# OS/2 metafile
-		elif 'pictAttributes' in self._parser.curState and '\\pmmetafile' == word:
-			pictAttributes = self._parser.curState['pictAttributes']
+		elif 'pictAttributes' in self._parser._curState and '\\pmmetafile' == word:
+			pictAttributes = self._parser._curState['pictAttributes']
 			pictAttributes['source'] = 'os2meta'
 			pictAttributes['metafileType'] = param
 			self._parser._setStateValue('pictAttributes', pictAttributes, False)
 			return True
 
 		# Windows metafile
-		elif 'pictAttributes' in self._parser.curState and '\\wmetafile' == word:
-			pictAttributes = self._parser.curState['pictAttributes']
+		elif 'pictAttributes' in self._parser._curState and '\\wmetafile' == word:
+			pictAttributes = self._parser._curState['pictAttributes']
 			pictAttributes['source'] = 'winmeta'
 			pictAttributes['metafileMappingMode'] = param
 			self._parser._setStateValue('pictAttributes', pictAttributes, False)
 			return True
 
 		# Windows device-independent bitmap
-		elif 'pictAttributes' in self._parser.curState and '\\dibitmap' == word:
-			pictAttributes = self._parser.curState['pictAttributes']
+		elif 'pictAttributes' in self._parser._curState and '\\dibitmap' == word:
+			pictAttributes = self._parser._curState['pictAttributes']
 			pictAttributes['source'] = 'wdibmp'
 			pictAttributes['bitmapType'] = param
 			self._parser._setStateValue('pictAttributes', pictAttributes, False)
 			return True
 
 		# Windows device-dependent bitmap
-		elif 'pictAttributes' in self._parser.curState and '\\wbitmap' == word:
-			pictAttributes = self._parser.curState['pictAttributes']
+		elif 'pictAttributes' in self._parser._curState and '\\wbitmap' == word:
+			pictAttributes = self._parser._curState['pictAttributes']
 			pictAttributes['source'] = 'wddbmp'
 			pictAttributes['bitmapType'] = param
 			self._parser._setStateValue('pictAttributes', pictAttributes, False)

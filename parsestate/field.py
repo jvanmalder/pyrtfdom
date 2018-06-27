@@ -51,7 +51,7 @@ class FieldState(ParseState):
 		# If we're parsing a \fldinst value and encounter another control word
 		# with the \* prefix, we know we're done parsing the parts of \fldinst
 		# we care about (this will change as I handle more of the RTF spec.)
-		if '\\*' == word and 'inFieldinst' in self._parser.curState and self._parser.curState['inFieldinst']:
+		if '\\*' == word and 'inFieldinst' in self._parser._curState and self._parser._curState['inFieldinst']:
 			self._parser._setStateValue('inFieldinst', False, False)
 			return True
 

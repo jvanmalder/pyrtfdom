@@ -49,17 +49,6 @@ class RTFParser(object):
 
 	###########################################################################
 
-	# Read-only public access to the current partial state. The deep copy is
-	# slow when you have to hit it a lot, so if that's the case, just access
-	# self._fullStateCache directly and promise to be good and not change
-	# anything O:-)
-	@property
-	def curState(self):
-
-		return copy.deepcopy(self._curState)
-
-	###########################################################################
-
 	# Content
 	def __init__(self, options):
 
@@ -298,16 +287,16 @@ class RTFParser(object):
 	# Enter the default parser state and begin parsing the document.
 	def parse(self):
 
+		# Initialize markers representing our current place in the document
+		self._curToken = False
+		self._prevToken = False
+
 		# Start with a default state where all the formatting attributes are
 		# turned off.
 		self._initState()
 
 		# Open our initial paragraph
 		self._openParagraph()
-
-		# Initialize markers representing our current place in the document
-		self._curToken = False
-		self._prevToken = False
 
 		# Begin parsing
 		mainState = MainState(self)

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import re, time
+import copy, re, time
 from abc import ABCMeta, abstractmethod
 
 from ..tokentype import TokenType
@@ -144,7 +144,6 @@ class ParseState(object):
 	# should return from the current call to self.parse().
 	def _parseCloseBrace(self, callOnStateChange = True):
 
-		oldStateCopy = self._parser.curState
 		oldStateFull = self._parser.fullState # used in call to onStateChange
 		self._parser._popStateStack()
 
