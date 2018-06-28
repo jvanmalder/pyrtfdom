@@ -8,7 +8,7 @@ class GroupSkipState(ParseState):
 	def __init__(self, parser):
 
 		super().__init__(parser)
-		self._parser._setStateValue('groupSkip', True, False)
+		self._parser._setStateValue('private', 'groupSkip', True)
 
 	###########################################################################
 
@@ -19,7 +19,7 @@ class GroupSkipState(ParseState):
 
 		# Once we've finished skipping over the group, we can stop parsing in
 		# this state.
-		if 'groupSkip' not in self._parser.fullState:
+		if 'groupSkip' not in self._parser._fullState['private']:
 			return False
 		else:
 			return True

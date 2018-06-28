@@ -65,14 +65,13 @@ class RTFDOM(object):
 		def __setFormatNodes(RTFParser, curParNode, state):
 
 			for attribute in state:
-				if RTFParser.isAttributeFormat(attribute):
-					if type(state[attribute]) == bool:
-						if state[attribute]:
-							node = elements.DOMElement.getElement(attribute)
-							self.__curNode.appendChild(node)
-							self.__curNode = node
-					else:
-						curParNode.attributes[attribute] = state[attribute]
+				if type(state[attribute]) == bool:
+					if state[attribute]:
+						node = elements.DOMElement.getElement(attribute)
+						self.__curNode.appendChild(node)
+						self.__curNode = node
+				else:
+					curParNode.attributes[attribute] = state[attribute]
 
 		#####
 
@@ -90,7 +89,7 @@ class RTFDOM(object):
 			# Finally, restore the current formatting state in the same paragraph
 			# and append to it a new text node. Create a new text node to append
 			# any text that might be in the same paragraph.
-			__setFormatNodes(RTFParser, self.__curNode, RTFParser.fullState)
+			__setFormatNodes(RTFParser, self.__curNode, RTFParser.fullStateAttributes)
 			textNode = elements.TextElement()
 			self.__curNode.appendChild(textNode)
 			self.__curNode = textNode
@@ -108,7 +107,7 @@ class RTFDOM(object):
 
 			# Any formatting attributes that are turned on in the current state
 			# should be represented by their corresponding DOM elements
-			__setFormatNodes(RTFParser, para, RTFParser.fullState)
+			__setFormatNodes(RTFParser, para, RTFParser.fullStateAttributes)
 
 			# Create a text node where we'll append text for the paragraph
 			textNode = elements.TextElement()

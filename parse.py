@@ -25,27 +25,33 @@ class RTFParser(object):
 		'alignment':     'left'
 	}
 
-	__specialStateVars = [
-		'groupSkip',      # we're skipping the current group
-		'inField',        # we're inside a {\field} group
-		'inFieldinst',    # we're inside the {\fldinst} portion of a \field
-		'inFieldrslt',    # we're inside the {\fldrslt} portion of a \field
-		'inPict',         # We're currently parsing an embedded image
-		'pictAttributes', # Attributes assigned to the image we're currently parsing
-		'inBlipUID',      # We're parsing an image's unique ID
-		'blipUID'         # Contains an image's unique ID
-	]
+	###########################################################################
+
+	# Read-only "protected" access to the full state. This is really only
+	# necessary when we're going to be passing objects stored in the state
+	# outside of our trusted parsing classes. An example would be when the
+	# onStateChange event is triggered.
+	@property
+	def _fullState(self):
+
+		return copy.deepcopy(self._fullStateCache)
 
 	###########################################################################
 
-	# Read-only public access to the full state. The deep copy is slow when you
-	# have to hit it a lot, so if that's the case, just access
-	# self._fullStateCache directly and promise to be good and not change
-	# anything O:-)
+	# Read-only public access to the full state's public attributes. Deep copy
+	# is slow, so if you need to hit this a lot, be a little bad and access
+	# self._fullStateCache directly. Just promise not to change anything O:-)
 	@property
-	def fullState(self):
+	def fullStateAttributes(self):
 
-		return copy.deepcopy(self._fullStateCache)
+		return copy.deepcopy(self._fullStateCache['attributes'])
+
+	###########################################################################
+
+	# Creates a new state.
+	def __createState(self):
+
+		return {'attributes': {}, 'private': {}}
 
 	###########################################################################
 
@@ -79,20 +85,14 @@ class RTFParser(object):
 
 		state = self._curState.copy()
 
-		for attribute in self.__stateFormattingAttributes.keys():
-			if attribute not in state:
-				for i in reversed(range(len(self.__stateStack))):
-					if attribute in self.__stateStack[i]:
-						state[attribute] = self.__stateStack[i][attribute]
-						break
-
-		# Special non-attribute state variables
-		for stateVar in self.__specialStateVars:
-			if stateVar not in state:
-				for i in reversed(range(len(self.__stateStack))):
-					if stateVar in self.__stateStack[i]:
-						state[stateVar] = self.__stateStack[i][stateVar]
-						break
+		if len(self.__stateStack):
+			for i in reversed(range(len(self.__stateStack))):
+				for namespace in self.__stateStack[i].keys():
+					if (namespace not in state):
+						state[namespace] = {}
+					for attribute in self.__stateStack[i][namespace].keys():
+						if attribute not in state[namespace]:
+							state[namespace][attribute] = self.__stateStack[i][namespace][attribute]
 
 		self._fullStateCache = state
 		return state
@@ -115,7 +115,7 @@ class RTFParser(object):
 	def _pushStateStack(self):
 
 		self.__stateStack.append(self._curState)
-		self._curState = {}
+		self._curState = self.__createState()
 
 	###########################################################################
 
@@ -167,10 +167,10 @@ class RTFParser(object):
 	# Reset the current state's formatting attributes to their default values.
 	def _resetStateFormattingAttributes(self, doCallback = True):
 
-		formerState = self._fullStateCache
+		formerStateAttributes = self._fullState['attributes']
 
 		for attribute in self.__stateFormattingAttributes.keys():
-			self._curState[attribute] = self.__stateFormattingAttributes[attribute]
+			self._curState['attributes'][attribute] = self.__stateFormattingAttributes[attribute]
 
 		# Update the full state cache now that the attributes have changed
 		self.__cacheFullState()
@@ -178,27 +178,27 @@ class RTFParser(object):
 		if doCallback:
 			callback = self._getCallback('onStateChange')
 			if callback:
-				callback(self, formerState, self._fullStateCache)
+				callback(self, formerStateAttributes, self._fullState['attributes'])
 
 	###########################################################################
 
-	# Sets a state value. Styling attributes (bold, italic, etc.) should trigger
-	# the onStateChange event. Boolean styling values like italic, bold, etc.
-	# should be set to True or False. Not doing so will result in undefined
-	# behavior. State values that are used internally and that don't effect the
-	# output can be set to whatever you want and should not trigger onStateChange.
-	def _setStateValue(self, attribute, value, triggerOnStateChange = True):
+	# Sets either a public attribute or a private state value (currently supported
+	# namespaces are 'attributes' and 'private'.) Values set in the 'attributes'
+	# namespace trigger the onStateChange event. Boolean attribute values like
+	# italic, bold, etc. should be set to True or False. Not doing so will result
+	# in wonky behavior.
+	def _setStateValue(self, namespace, attribute, value):
 
-		oldState = self._fullStateCache
-		self._curState[attribute] = value
+		oldStateAttributes = self._fullState['attributes']
+		self._curState[namespace][attribute] = value
 
 		# Update the full state cache now that the attribute has changed
 		self.__cacheFullState()
 
-		if triggerOnStateChange:
+		if 'attributes' == namespace:
 			callback = self._getCallback('onStateChange')
 			if callback:
-				callback(self, oldState, self._fullStateCache)
+				callback(self, oldStateAttributes, self._fullState['attributes'])
 
 	###########################################################################
 
@@ -217,9 +217,9 @@ class RTFParser(object):
 	# Reset to a default state where all the formatting attributes are turned off.
 	def _initState(self):
 
-		self._curState = {}
-		self._resetStateFormattingAttributes(False)
+		self._curState = self.__createState()
 		self._fullStateCache = self._curState.copy()
+		self._resetStateFormattingAttributes(False)
 
 	###########################################################################
 
@@ -252,17 +252,6 @@ class RTFParser(object):
 
 		# Records the previously retrieved token during parsing
 		self._prevToken = False
-
-	###########################################################################
-
-	# Returns true if the specified attribute is a formatting attribute and false
-	# if not.
-	def isAttributeFormat(self, attr):
-
-		if attr in self.__stateFormattingAttributes:
-			return True
-		else:
-			return False
 
 	###########################################################################
 

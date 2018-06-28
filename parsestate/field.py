@@ -8,7 +8,7 @@ class FieldState(ParseState):
 	def __init__(self, parser):
 
 		super().__init__(parser)
-		self._parser._setStateValue('inField', True, False)
+		self._parser._setStateValue('private', 'inField', True)
 
 		# Initialize the two components of a field
 		self.__fldRslt = ''
@@ -38,7 +38,7 @@ class FieldState(ParseState):
 
 		# Once we've finished with the field group, we can stop parsing in this
 		# state.
-		if 'inField' not in self._parser.fullState:
+		if 'inField' not in self._parser._fullState['private']:
 			self.__append()
 			return False
 		else:
@@ -51,20 +51,20 @@ class FieldState(ParseState):
 		# If we're parsing a \fldinst value and encounter another control word
 		# with the \* prefix, we know we're done parsing the parts of \fldinst
 		# we care about (this will change as I handle more of the RTF spec.)
-		if '\\*' == word and 'inFieldinst' in self._parser._curState and self._parser._curState['inFieldinst']:
-			self._parser._setStateValue('inFieldinst', False, False)
+		if '\\*' == word and 'inFieldinst' in self._parser._curState['private'] and self._parser._curState['private']['inFieldinst']:
+			self._parser._setStateValue('private', 'inFieldinst', False)
 			return True
 
 		# Most recent calculated result of field. In practice, this is also
 		# the text that would be parsed into the paragraph by an RTF reader
 		# that doesn't understand fields.
 		elif TokenType.OPEN_BRACE == self._parser._prevToken[0] and '\\fldrslt' == word:
-			self._parser._setStateValue('inFieldrslt', True, False)
+			self._parser._setStateValue('private', 'inFieldrslt', True)
 			return True
 
 		# Field instruction
 		elif '\\*' == self._parser._prevToken[1] and '\\fldinst' == word:
-			self._parser._setStateValue('inFieldinst', True, False)
+			self._parser._setStateValue('private', 'inFieldinst', True)
 			return True
 
 		else:
@@ -74,10 +74,10 @@ class FieldState(ParseState):
 
 	def _parseCharacter(self, token):
 
-		if 'inFieldrslt' in self._parser.fullState and self._parser.fullState['inFieldrslt']:
+		if 'inFieldrslt' in self._parser._fullState['private'] and self._parser._fullState['private']['inFieldrslt']:
 			self.__fldRslt += token
 
-		elif 'inFieldinst' in self._parser.fullState and self._parser.fullState['inFieldinst']:
+		elif 'inFieldinst' in self._parser._fullState['private'] and self._parser._fullState['private']['inFieldinst']:
 			self.__fldInst += token
 
 		return True
