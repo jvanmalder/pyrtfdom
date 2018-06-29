@@ -144,13 +144,18 @@ class ParseState(object):
 	# should return from the current call to self.parse().
 	def _parseCloseBrace(self, callOnStateChange = True):
 
-		oldStateFullAttributes = self._parser._fullState['attributes'] # used in call to onStateChange
+		oldStateFullAttributes = self._parser._fullState
+		oldStateFullAttributes.pop('private', None)
+
 		self._parser._popStateStack()
+
+		newStateFullAttributes = self._parser._fullState
+		newStateFullAttributes.pop('private', None)
 
 		if callOnStateChange:
 			callback = self._parser._getCallback('onStateChange')
 			if callback:
-				callback(self._parser, oldStateFullAttributes, self._parser._fullState['attributes'])
+				callback(self._parser, oldStateFullAttributes, newStateFullAttributes)
 
 		return True
 
@@ -294,22 +299,22 @@ class ParseState(object):
 
 		# Paragraph alignment
 		elif '\\ql' == word:
-			self._parser._setStateValue('attributes', 'alignment', 'left')
+			self._parser._setStateValue('paragraph', 'alignment', 'left')
 
 		elif '\\qr' == word:
-			self._parser._setStateValue('attributes', 'alignment', 'right')
+			self._parser._setStateValue('paragraph', 'alignment', 'right')
 
 		elif '\\qc' == word:
-			self._parser._setStateValue('attributes', 'alignment', 'center')
+			self._parser._setStateValue('paragraph', 'alignment', 'center')
 
 		elif '\\qd' == word:
-			self._parser._setStateValue('attributes', 'alignment', 'distributed')
+			self._parser._setStateValue('paragraph', 'alignment', 'distributed')
 
 		elif '\\qj' == word:
-			self._parser._setStateValue('attributes', 'alignment', 'justified')
+			self._parser._setStateValue('paragraph', 'alignment', 'justified')
 
 		elif '\\qt' == word:
-			self._parser._setStateValue('attributes', 'alignment', 'thai-distributed')
+			self._parser._setStateValue('paragraph', 'alignment', 'thai-distributed')
 
 		# TODO: how do I want to handle \qkN alignment? Will require setting
 		# two attributes.
@@ -317,30 +322,30 @@ class ParseState(object):
 		# Italic
 		elif '\\i' == word:
 			if param is None or '1' == param:
-				self._parser._setStateValue('attributes', 'italic', True)
+				self._parser._setStateValue('character', 'italic', True)
 			else:
-				self._parser._setStateValue('attributes', 'italic', False)
+				self._parser._setStateValue('character', 'italic', False)
 
 		# Bold
 		elif '\\b' == word:
 			if param is None or '1' == param:
-				self._parser._setStateValue('attributes', 'bold', True)
+				self._parser._setStateValue('character', 'bold', True)
 			else:
-				self._parser._setStateValue('attributes', 'bold', False)
+				self._parser._setStateValue('character', 'bold', False)
 
 		# Underline
 		elif '\\ul' == word:
 			if param is None or '1' == param:
-				self._parser._setStateValue('attributes', 'underline', True)
+				self._parser._setStateValue('character', 'underline', True)
 			else:
-				self._parser._setStateValue('attributes', 'underline', False)
+				self._parser._setStateValue('character', 'underline', False)
 
 		# Strike-through
 		elif '\\strike' == word:
 			if param is None or '1' == param:
-				self._parser._setStateValue('attributes', 'strikethrough', True)
+				self._parser._setStateValue('character', 'strikethrough', True)
 			else:
-				self._parser._setStateValue('attributes', 'strikethrough', False)
+				self._parser._setStateValue('character', 'strikethrough', False)
 
 		return True
 

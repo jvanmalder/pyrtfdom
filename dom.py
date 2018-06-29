@@ -62,7 +62,7 @@ class RTFDOM(object):
 
 		# Utility function for the below callbacks that sets up a series of nodes
 		# corresponding to the specified format.
-		def __setFormatNodes(RTFParser, curParNode, state):
+		def __setCharacterFormatNodes(RTFParser, curParNode, state):
 
 			for attribute in state:
 				if type(state[attribute]) == bool:
@@ -86,10 +86,16 @@ class RTFDOM(object):
 			node = elements.PageBreakElement()
 			self.__curNode.appendChild(node)
 
+			# Any paragraph formatting attributes should be set on the new
+			# paragraph node.
+			parAttributes = RTFParser.fullStateAttributes['paragraph']
+			for parAttribute in parAttributes.keys():
+				self.__curNode.attributes[parAttribute] = parAttributes[parAttribute]
+
 			# Finally, restore the current formatting state in the same paragraph
 			# and append to it a new text node. Create a new text node to append
 			# any text that might be in the same paragraph.
-			__setFormatNodes(RTFParser, self.__curNode, RTFParser.fullStateAttributes)
+			__setCharacterFormatNodes(RTFParser, self.__curNode, RTFParser.fullStateAttributes['character'])
 			textNode = elements.TextElement()
 			self.__curNode.appendChild(textNode)
 			self.__curNode = textNode
@@ -105,9 +111,15 @@ class RTFDOM(object):
 			self.__rootNode.appendChild(para)
 			self.__curNode = para
 
-			# Any formatting attributes that are turned on in the current state
+			# Any paragraph formatting attributes should be set on the new
+			# paragraph node.
+			parAttributes = RTFParser.fullStateAttributes['paragraph']
+			for parAttribute in parAttributes.keys():
+				para.attributes[parAttribute] = parAttributes[parAttribute]
+
+			# Any character formatting attributes that are turned on in the current state
 			# should be represented by their corresponding DOM elements
-			__setFormatNodes(RTFParser, para, RTFParser.fullStateAttributes)
+			__setCharacterFormatNodes(RTFParser, para, RTFParser.fullStateAttributes['character'])
 
 			# Create a text node where we'll append text for the paragraph
 			textNode = elements.TextElement()
@@ -131,15 +143,17 @@ class RTFDOM(object):
 			# element's distance from the root node.
 			turnedOff = {}
 
-			for attribute in newState:
+			for attribute in newState['character']:
 
-				if attribute not in oldState.keys() or newState[attribute] != oldState[attribute]:
+				if attribute not in oldState['character'].keys() or (
+					newState['character'][attribute] != oldState['character'][attribute]
+				):
 
 					# We're dealing with on/off attributes like bold, italic, etc.
-					if type(newState[attribute]) == bool:
+					if type(newState['character'][attribute]) == bool:
 
 						# we're turning the attribute on
-						if newState[attribute]:
+						if newState['character'][attribute]:
 
 							# elements[attribute] means the element type that
 							# corresponds to the attribute
@@ -153,16 +167,27 @@ class RTFDOM(object):
 						else:
 							turnedOff[attribute] = self.__distanceFromRoot(attribute)
 
-					# For now, any non-boolean attributes must be set at the
-					# paragraph level (this could change as I implement more of
-					# the RTF standard.)
+					# TODO: Not sure if I'll need to handle non-boolean character
+					# formatting attributes yet. I'm placing this here so that if
+					# I do start working with them, I'll remember right away and
+					# know to implement it.
 					else:
+						raise Exception('Encountered non-boolean character formatting property.')
 
-						parNode = self.__curNode
-						while 'para' != parNode.nodeType:
-							parNode = parNode.parent
+			# For now, any non-boolean attributes must be set at the
+			# paragraph level (this could change as I implement more of
+			# the RTF standard.)
+			for attribute in newState['paragraph']:
 
-						parNode.attributes[attribute] = newState[attribute]
+				if attribute not in oldState['paragraph'].keys() or (
+					newState['paragraph'][attribute] != oldState['paragraph'][attribute]
+				):
+
+					parNode = self.__curNode
+					while 'para' != parNode.nodeType:
+						parNode = parNode.parent
+
+					parNode.attributes[attribute] = newState['paragraph'][attribute]
 
 			# If we turned off one or more formatting attributes, find the DOM
 			# element closest to the root RTF node that got turned off and

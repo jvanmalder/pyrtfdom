@@ -13,16 +13,29 @@ from .tokentype import TokenType
 
 class RTFParser(object):
 
-	# Text formatting attributes and their default values. Values with booleans
+	# Formatting attributes and their default values. Values with booleans
 	# should be set to either True (for on) or False (for off.) If an attribute
 	# doesn't exist in the current state, it means we must retrieve its value
 	# from the first state up the stack where it's defined.
-	__stateFormattingAttributes = {
-		'italic':        False,
-		'bold':          False,
-		'underline':     False,
-		'strikethrough': False,
-		'alignment':     'left'
+	__formattingAttributes = {
+
+		# TODO
+		'document': {},
+		'section':  {},
+		'table':    {},
+
+		# Paragraph formatting properties
+		'paragraph': {
+			'alignment': 'left'
+		},
+
+		# Character formatting properties
+		'character': {
+			'italic':        False,
+			'bold':          False,
+			'underline':     False,
+			'strikethrough': False
+		}
 	}
 
 	###########################################################################
@@ -44,14 +57,27 @@ class RTFParser(object):
 	@property
 	def fullStateAttributes(self):
 
-		return copy.deepcopy(self._fullStateCache['attributes'])
+		return {
+			'document':  copy.deepcopy(self._fullStateCache['document']),
+			'section':   copy.deepcopy(self._fullStateCache['section']),
+			'table':     copy.deepcopy(self._fullStateCache['table']),
+			'paragraph': copy.deepcopy(self._fullStateCache['paragraph']),
+			'character': copy.deepcopy(self._fullStateCache['character'])
+		}
 
 	###########################################################################
 
 	# Creates a new state.
 	def __createState(self):
 
-		return {'attributes': {}, 'private': {}}
+		return {
+			'document':  {},
+			'section':   {},
+			'table':     {},
+			'paragraph': {},
+			'character': {},
+			'private':   {}
+		}
 
 	###########################################################################
 
@@ -60,10 +86,10 @@ class RTFParser(object):
 
 		self.reset()
 
-		# This class only parses the RTF. How that data is encoded and represented
-		# after parsing is up to the client, and the client should provide a
-		# at least a minimum number of callbacks to process that data as it's
-		# extracted from the RTF.
+		# This class only parses the RTF. How that data is encoded and
+		# represented after parsing is up to the client, and the client should
+		# provide at least a minimum number of callbacks to process that data as
+		# it's extracted from the RTF.
 		if not options or 'callbacks' not in options:
 			raise Exception('Did not pass required callbacks.')
 		elif (
@@ -167,50 +193,50 @@ class RTFParser(object):
 	# Reset the current state's formatting attributes to their default values.
 	def _resetStateFormattingAttributes(self, doCallback = True):
 
-		formerStateAttributes = self._fullState['attributes']
+		formerStateAttributes = self._fullState
+		formerStateAttributes.pop('private', None) # Only return publicly accessible attributes
 
-		for attribute in self.__stateFormattingAttributes.keys():
-			self._curState['attributes'][attribute] = self.__stateFormattingAttributes[attribute]
+		for attributeType in self.__formattingAttributes.keys():
+			for attribute in self.__formattingAttributes[attributeType].keys():
+				self._curState[attributeType][attribute] = self.__formattingAttributes[attributeType][attribute]
 
 		# Update the full state cache now that the attributes have changed
 		self.__cacheFullState()
 
+		# Pass in both the previous and current state attributes
+		newStateAttributes = self._fullState
+		newStateAttributes.pop('private', None)
+
 		if doCallback:
 			callback = self._getCallback('onStateChange')
 			if callback:
-				callback(self, formerStateAttributes, self._fullState['attributes'])
+				callback(self, formerStateAttributes, newStateAttributes)
 
 	###########################################################################
 
-	# Sets either a public attribute or a private state value (currently supported
-	# namespaces are 'attributes' and 'private'.) Values set in the 'attributes'
-	# namespace trigger the onStateChange event. Boolean attribute values like
-	# italic, bold, etc. should be set to True or False. Not doing so will result
-	# in wonky behavior.
+	# Sets either a public attribute or a private state value. Values set in a
+	# publicly accessible namespace trigger the onStateChange event. Boolean
+	# attribute values like italic, bold, etc. should be set to True or False.
+	# Not doing so will result in wonky behavior.
 	def _setStateValue(self, namespace, attribute, value):
 
-		oldStateAttributes = self._fullState['attributes']
+		oldStateAttributes = self._fullState
+		oldStateAttributes.pop('private', None)
+
 		self._curState[namespace][attribute] = value
 
 		# Update the full state cache now that the attribute has changed
 		self.__cacheFullState()
 
-		if 'attributes' == namespace:
+		newStateAttributes = self._fullState
+		newStateAttributes.pop('private', None)
+
+		# If we're not setting a private state variable, call the onStateChange
+		# callback
+		if namespace in self.__formattingAttributes.keys():
 			callback = self._getCallback('onStateChange')
 			if callback:
-				callback(self, oldStateAttributes, self._fullState['attributes'])
-
-	###########################################################################
-
-	# Sets a document level attribute (not the same as a formatting attribute.)
-	# Examples are the value of \*\generator, etc. This means nothing to the
-	# parser itself, and will do nothing unless a callback has been registered
-	# to handle it.
-	def _setDocumentAttribute(self, attribute, value):
-
-		callback = self._getCallback('onSetDocumentAttribute')
-		if callback:
-			callback(self, attribute, value)
+				callback(self, oldStateAttributes, newStateAttributes)
 
 	###########################################################################
 
