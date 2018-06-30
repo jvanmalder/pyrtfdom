@@ -26,7 +26,8 @@ class RTFParser(object):
 
 		# Paragraph formatting properties
 		'paragraph': {
-			'alignment': 'left'
+			'alignment': 'left',
+			'pagebreakBefore': False
 		},
 
 		# Character formatting properties
@@ -249,6 +250,19 @@ class RTFParser(object):
 
 	###########################################################################
 
+	# Adds a new style to the stylesheet. styleType should be one of 'section',
+	# 'table', 'paragraph' or 'character'. styleIndex is how the style is named
+	# in the RTF. For example, \s1 would have styleType = 'paragraph' and
+	# styleIndex = 1. Properties should be a dict object defined as follows:
+	# {name: '<style name as defined in RTF stylesheet>', attributes: <dict with
+	# attributes that should be turned on in the current state whenever the style
+	# is encountered later during parsing>}.
+	def _insertStyle(self, styleType, styleIndex, properties):
+
+		self.__stylesheet[styleType][styleIndex] = properties
+
+	###########################################################################
+
 	# Resets the parser to an initialized state so we can parse another document.
 	def reset(self):
 
@@ -278,6 +292,14 @@ class RTFParser(object):
 
 		# Records the previously retrieved token during parsing
 		self._prevToken = False
+
+		# Styles parsed out of the RTF's stylesheet
+		self.__stylesheet = {
+			'section':   {},
+			'table':     {},
+			'paragraph': {},
+			'character': {}
+		}
 
 	###########################################################################
 
@@ -316,4 +338,11 @@ class RTFParser(object):
 		# Begin parsing
 		mainState = MainState(self)
 		mainState.parse()
+
+	###########################################################################
+
+	# Debugging method to print out the contents of the stylesheet.
+	def printStylesheet(self):
+
+		print(self.__stylesheet)
 

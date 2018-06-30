@@ -285,8 +285,13 @@ class ParseState(object):
 		################################################
 
 		# We're inserting a page break into the current paragraph
-		elif '\\page' == word or '\\pagebb' == word:
+		elif '\\page' == word:
 			self._parser._breakPage()
+
+		# Similar to \page except that this signals that a page break should be
+		# inserted before the start of the paragraph
+		elif '\\pagebb' == word:
+			self._parser._setStateValue('paragraph', 'pagebreakBefore', True)
 
 		# We're ending the current paragraph and starting a new one
 		elif '\\par' == word:
