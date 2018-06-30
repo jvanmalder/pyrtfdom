@@ -6,6 +6,7 @@ from .state import ParseState
 from .groupskip import GroupSkipState
 from .pict import PictState
 from .field import FieldState
+from .stylesheet import StylesheetState
 
 class MainState(ParseState):
 
@@ -46,12 +47,17 @@ class MainState(ParseState):
 			TokenType.OPEN_BRACE == self._parser._prevToken[0] and (
 				word == '\\fonttbl' or
 				word == '\\colortbl' or
-				word == '\\stylesheet'or
 				word == '\\stylerestrictions' or # Does this even exist...?
 				word == '\\info' # TODO: parse this into document attributes
 			)
 		):
 			state = GroupSkipState(self._parser)
+			state.parse()
+			return True
+
+		# We're parsing the stylesheet
+		elif TokenType.OPEN_BRACE == self._parser._prevToken[0] and '\\stylesheet' == word:
+			state = StylesheetState(self._parser)
 			state.parse()
 			return True
 
