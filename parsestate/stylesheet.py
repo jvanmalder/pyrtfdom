@@ -20,6 +20,16 @@ class StylesheetState(ParseState):
 
 	###########################################################################
 
+	# Once we're done parsing the stylesheet, make sure to update the document's
+	# default properties if they're defined.
+	def __updateDefaults(self):
+
+		defaultParagraphStyles = self._parser._getStyle('paragraph', 0)
+		if defaultParagraphStyles:
+			self._parser._updateDefaultAttributes('paragraph', defaultParagraphStyles, True)
+
+	###########################################################################
+
 	# Look out for when we've finished with the skipped group.
 	def _parseCloseBrace(self):
 
@@ -28,6 +38,7 @@ class StylesheetState(ParseState):
 		# Once we've finished skipping over the group, we can stop parsing in
 		# this state.
 		if 'inStylesheet' not in self._parser._fullState['private']:
+			self.__updateDefaults()
 			retVal = False
 
 		# We're inserting a newly parsed style into the stylesheet

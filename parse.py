@@ -26,6 +26,7 @@ class RTFParser(object):
 
 		# Paragraph formatting properties
 		'paragraph': {
+			'style':     'Normal',
 			'alignment': 'left',
 			'pagebreakBefore': False
 		},
@@ -123,6 +124,26 @@ class RTFParser(object):
 
 		self._fullStateCache = state
 		return state
+
+	###########################################################################
+
+	# Updates the default formatting attributes. Useful when, for example, we're
+	# parsing \s0 (default paragraph style) in an RTF stylesheet. See comment
+	# inside function for explanation of uglyStateFix parameter.
+	def _updateDefaultAttributes(self, attributeType, attributes, uglyStateFix = False):
+
+		for attribute in attributes['attributes'].keys():
+			self.__formattingAttributes[attributeType][attribute] = attributes['attributes'][attribute]
+
+		# UGLY HACK ALERT: by the time the stylesheet attribute has been parsed,
+		# we've already pushed an initial state on the stack which contains the
+		# old pre-stylesheet defaults. I have to make sure this state is updated
+		# according to the new defaults. Set uglyStateFix to true only when
+		# we're calling this immediately after parsing the stylesheet.
+		if uglyStateFix and len(self.__stateStack):
+			for attribute in attributes['attributes'].keys():
+				self.__stateStack[0][attributeType][attribute] = attributes['attributes'][attribute]
+			self.__cacheFullState()
 
 	###########################################################################
 
@@ -259,7 +280,18 @@ class RTFParser(object):
 	# is encountered later during parsing>}.
 	def _insertStyle(self, styleType, styleIndex, properties):
 
-		self.__stylesheet[styleType][styleIndex] = properties
+		self.__stylesheet[styleType][int(styleIndex)] = properties
+
+	###########################################################################
+
+	# Return the style of the specified type and index if it exists in the
+	# stylesheet and None if not.
+	def _getStyle(self, styleType, styleIndex):
+
+		if styleType in self.__stylesheet and styleIndex in self.__stylesheet[styleType]:
+			return self.__stylesheet[styleType][styleIndex]
+		else:
+			return None
 
 	###########################################################################
 
@@ -344,5 +376,6 @@ class RTFParser(object):
 	# Debugging method to print out the contents of the stylesheet.
 	def printStylesheet(self):
 
+		print('RTF Stylesheet:')
 		print(self.__stylesheet)
 
