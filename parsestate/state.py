@@ -168,6 +168,13 @@ class ParseState(object):
 	# return from the current call to self.parse().
 	def _parseControl(self, word, param):
 
+		styleControlWordTypes = {
+			'\\s':  'paragraph',
+			'\\ds': 'section',
+			'\\ts': 'table',
+			'\\cs': 'character'
+		}
+
 		################################################
 		#          Escaped special characters          #
 		################################################
@@ -324,13 +331,13 @@ class ParseState(object):
 		# TODO: how do I want to handle \qkN alignment? Will require setting
 		# two attributes.
 
-		# Paragraph style from the stylesheet
-		elif '\\s' == word and isinstance(param, str) and param.isdigit():
-			style = self._parser._getStyle('paragraph', param)
+		# Setting a style defined in the stylesheet
+		elif word in styleControlWordTypes and isinstance(param, str) and param.isdigit():
+			style = self._parser._getStyle(styleControlWordTypes[word], param)
 			if (style):
-				self._parser._setStateValue('paragraph', 'style', style['name'])
+				self._parser._setStateValue(styleControlWordTypes[word], 'style', style['name'])
 				for attribute in style['attributes'].keys():
-					self._parser._setStateValue('paragraph', attribute, style['attributes'][attribute])
+					self._parser._setStateValue(styleControlWordTypes[word], attribute, style['attributes'][attribute])
 
 		# Italic
 		elif '\\i' == word:
