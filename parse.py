@@ -288,8 +288,8 @@ class RTFParser(object):
 	# stylesheet and None if not.
 	def _getStyle(self, styleType, styleIndex):
 
-		if styleType in self.__stylesheet and styleIndex in self.__stylesheet[styleType]:
-			return self.__stylesheet[styleType][styleIndex]
+		if styleType in self.__stylesheet and int(styleIndex) in self.__stylesheet[styleType]:
+			return self.__stylesheet[styleType][int(styleIndex)]
 		else:
 			return None
 

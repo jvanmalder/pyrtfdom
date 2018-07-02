@@ -324,6 +324,14 @@ class ParseState(object):
 		# TODO: how do I want to handle \qkN alignment? Will require setting
 		# two attributes.
 
+		# Paragraph style from the stylesheet
+		elif '\\s' == word and isinstance(param, str) and param.isdigit():
+			style = self._parser._getStyle('paragraph', param)
+			if (style):
+				self._parser._setStateValue('paragraph', 'style', style['name'])
+				for attribute in style['attributes'].keys():
+					self._parser._setStateValue('paragraph', attribute, style['attributes'][attribute])
+
 		# Italic
 		elif '\\i' == word:
 			if param is None or '1' == param:
