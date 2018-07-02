@@ -20,7 +20,7 @@ class ParseState(object):
 	# Splits a control word token into its word and parameter parts. Returns an
 	# array of the form [word, parameter]. If there's no parameter, that part of
 	# the array will be set to None.
-	def __splitControlWord(self, token):
+	def _splitControlWord(self, token):
 
 		control = token[1].strip()
 
@@ -263,7 +263,7 @@ class ParseState(object):
 			try:
 
 				charCode = int(param, 16)
-				prevTokenParts = self.__splitControlWord(self._parser._prevToken)
+				prevTokenParts = self._splitControlWord(self._parser._prevToken)
 
 				# Per the RTF standard, if a \uXXX unicode symbol has an ANSI
 				# equivalent, the ANSI character will be encoded directly
@@ -393,7 +393,7 @@ class ParseState(object):
 				# appending tokens to any special destination or group that
 				# might contain control words.
 				elif TokenType.CONTROL_WORDORSYM == self._parser._curToken[0]:
-					tokenParts = self.__splitControlWord(self._parser._curToken)
+					tokenParts = self._splitControlWord(self._parser._curToken)
 					if not self._parseControl(tokenParts[0], tokenParts[1]):
 						return
 

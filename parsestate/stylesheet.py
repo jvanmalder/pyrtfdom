@@ -58,24 +58,28 @@ class StylesheetState(ParseState):
 				# dealing with
 				elif TokenType.OPEN_BRACE == self._parser._prevToken[0] and '\\*' == word:
 
+					self._parser._prevToken = self._parser._curToken
 					self._parser._curToken = self._getNextToken()
+
 					if TokenType.EOF == self._parser._curToken[0]:
 						raise EOFError('Premature EOF encountered when parsing RTF stylesheet')
 
+					tokenParts = self._splitControlWord(self._parser._curToken)
+
 					# Section style
-					if '\\ds' == word:
+					if '\\ds' == tokenParts[0]:
 						self._parser._setStateValue('private', 'styleType', 'section')
-						self._parser._setStateValue('private', 'styleIndex', param)
+						self._parser._setStateValue('private', 'styleIndex', tokenParts[1])
 
 					# Table style
-					elif '\\ts' == word:
+					elif '\\ts' == tokenParts[0]:
 						self._parser._setStateValue('private', 'styleType', 'table')
-						self._parser._setStateValue('private', 'styleIndex', param)
+						self._parser._setStateValue('private', 'styleIndex', tokenParts[1])
 
 					# Character style
-					elif '\\cs' == word:
+					elif '\\cs' == tokenParts[0]:
 						self._parser._setStateValue('private', 'styleType', 'character')
-						self._parser._setStateValue('private', 'styleIndex', param)
+						self._parser._setStateValue('private', 'styleIndex', tokenParts[1])
 
 					# Style definition is invalid, so skip over it and hope for the best
 					else:
