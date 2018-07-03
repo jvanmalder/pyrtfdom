@@ -369,27 +369,15 @@ class ParseState(object):
 
 		# Foreground color
 		elif '\\cf' == word and isinstance(param, str) and param.isdigit():
-
-			# This is the default "auto" color
-			if '0' == param:
-				self._parser._setStateValue('character', 'fColor', False)
-
-			else:
-				color = self._parser._getColor(param)
-				if color:
-					self._parser._setStateValue('character', 'fColor', color)
+			color = self._parser._getColor(param)
+			if color:
+				self._parser._setStateValue('character', 'fColor', color)
 
 		# Background color
 		elif '\\cb' == word and isinstance(param, str) and param.isdigit():
-
-			# This is the default "auto" color
-			if '0' == param:
-				self._parser._setStateValue('character', 'bColor', False)
-
-			else:
-				color = self._parser._getColor(param)
-				if color:
-					self._parser._setStateValue('character', 'bColor', color)
+			color = self._parser._getColor(param)
+			if color:
+				self._parser._setStateValue('character', 'bColor', color)
 
 		return True
 

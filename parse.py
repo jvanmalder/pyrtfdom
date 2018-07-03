@@ -357,7 +357,9 @@ class RTFParser(object):
 		}
 
 		# Defined in \colortbl
-		self.__colortable = []
+		self.__colortable = [
+			False # \s0 will always be the default "auto" color
+		]
 
 	###########################################################################
 
@@ -404,4 +406,12 @@ class RTFParser(object):
 
 		print('RTF Stylesheet:')
 		print(self.__stylesheet)
+
+	###########################################################################
+
+	# Debugging method to print out the contents of the color table.
+	def printColorTable(self):
+
+		print('RTF Color Table:')
+		print(self.__colortable)
 

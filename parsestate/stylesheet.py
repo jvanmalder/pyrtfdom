@@ -177,27 +177,15 @@ class StylesheetState(ParseState):
 
 					# Foreground color
 					elif '\\cf' == word and isinstance(param, str) and param.isdigit():
-
-						# This is the default "auto" color
-						if '0' == param:
-							styleProperties['fColor'] = False
-
-						else:
-							color = self._parser._getColor(param)
-							if color:
-								styleProperties['fColor'] = color
+						color = self._parser._getColor(param)
+						if color:
+							styleProperties['fColor'] = color
 
 					# Background color
 					elif '\\cb' == word and isinstance(param, str) and param.isdigit():
-
-						# This is the default "auto" color
-						if '0' == param:
-							styleProperties['bColor'] = False
-
-						else:
-							color = self._parser._getColor(param)
-							if color:
-								styleProperties['bColor'] = color
+						color = self._parser._getColor(param)
+						if color:
+							styleProperties['bColor'] = color
 
 				self._parser._setStateValue('private', 'styleProperties', styleProperties)
 
