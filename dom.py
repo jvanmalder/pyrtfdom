@@ -149,8 +149,15 @@ class RTFDOM(object):
 					newState['character'][attribute] != oldState['character'][attribute]
 				):
 
+					# TODO
+					# Apply colors
+					if 'fColor' == attribute or 'bColor' == attribute:
+						# TODO: if auto color, indicated by a value of False,
+						# ignore this and continue on
+						pass
+
 					# We're dealing with on/off attributes like bold, italic, etc.
-					if type(newState['character'][attribute]) == bool:
+					elif type(newState['character'][attribute]) == bool:
 
 						# we're turning the attribute on
 						if newState['character'][attribute]:

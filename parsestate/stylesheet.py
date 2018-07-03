@@ -175,6 +175,30 @@ class StylesheetState(ParseState):
 
 					# TODO: how do I want to handle \plain?
 
+					# Foreground color
+					elif '\\cf' == word and isinstance(param, str) and param.isdigit():
+
+						# This is the default "auto" color
+						if '0' == param:
+							styleProperties['fColor'] = False
+
+						else:
+							color = self._parser._getColor(param)
+							if color:
+								styleProperties['fColor'] = color
+
+					# Background color
+					elif '\\cb' == word and isinstance(param, str) and param.isdigit():
+
+						# This is the default "auto" color
+						if '0' == param:
+							styleProperties['bColor'] = False
+
+						else:
+							color = self._parser._getColor(param)
+							if color:
+								styleProperties['bColor'] = color
+
 				self._parser._setStateValue('private', 'styleProperties', styleProperties)
 
 			# Style definition is invalid, so skip over it and hope for the best

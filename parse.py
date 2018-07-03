@@ -32,11 +32,16 @@ class RTFParser(object):
 		},
 
 		# Character formatting properties
+		# An fColor or bColor of False indicates \c0, the "auto" color. If a
+		# different color is defined, this will be set to a dict with the
+		# following properties: 'red', 'green', 'blue', 'shade' and 'tint'.
 		'character': {
 			'italic':        False,
 			'bold':          False,
 			'underline':     False,
-			'strikethrough': False
+			'strikethrough': False,
+			'fColor':        False,
+			'bColor':        False
 		}
 	}
 
@@ -295,6 +300,24 @@ class RTFParser(object):
 
 	###########################################################################
 
+	# Insert a color into the color table.
+	def _insertColor(self, color):
+
+		self.__colortable.push(color)
+
+	###########################################################################
+
+	# Returns the color from the color table at the specified index if it exists
+	# and None if it doesn't.
+	def _getColor(self, index):
+
+		if int(index) < len(self.__colortable):
+			return self.__colortable[int(index)]
+		else:
+			return None
+
+	###########################################################################
+
 	# Resets the parser to an initialized state so we can parse another document.
 	def reset(self):
 
@@ -332,6 +355,9 @@ class RTFParser(object):
 			'paragraph': {},
 			'character': {}
 		}
+
+		# Defined in \colortbl
+		self.__colortable = []
 
 	###########################################################################
 
