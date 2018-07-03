@@ -65,14 +65,24 @@ class RTFDOM(object):
 		def __setCharacterFormatNodes(RTFParser, curParNode, state):
 
 			for attribute in state:
-				if type(state[attribute]) == bool:
+
+				# TODO
+				# Apply colors
+				if 'fColor' == attribute or 'bColor' == attribute:
+					# TODO: if auto color, indicated by a value of False,
+					# ignore this and continue on
+					pass
+
+				elif type(state[attribute]) == bool:
 					if state[attribute]:
 						node = elements.DOMElement.getElement(attribute)
 						self.__curNode.appendChild(node)
 						self.__curNode = node
-				else:
-					curParNode.attributes[attribute] = state[attribute]
 
+				# TODO: are there any non-boolean and non-color attributes, and
+				# if so, how do we handle them?
+				else:
+					pass
 		#####
 
 		# Inserts a page break into the current paragraph node.

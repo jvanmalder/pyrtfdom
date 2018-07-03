@@ -303,7 +303,7 @@ class RTFParser(object):
 	# Insert a color into the color table.
 	def _insertColor(self, color):
 
-		self.__colortable.push(color)
+		self.__colortable.append(color)
 
 	###########################################################################
 
@@ -357,9 +357,7 @@ class RTFParser(object):
 		}
 
 		# Defined in \colortbl
-		self.__colortable = [
-			False # \s0 will always be the default "auto" color
-		]
+		self.__colortable = []
 
 	###########################################################################
 
