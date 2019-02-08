@@ -53,7 +53,7 @@ class ParseState(object):
 				decimalCount = 0
 				while decimalCount < 2 and (
 					self._parser._content[self._parser._curPos].isdigit() or
-					self._parser._content[self._parser._curPos].upper() in ['A', 'B', 'C', 'D', 'E']
+					self._parser._content[self._parser._curPos].upper() in ['A', 'B', 'C', 'D', 'E', 'F']
 				):
 					token = token + self._parser._content[self._parser._curPos]
 					self._parser._curPos = self._parser._curPos + 1
