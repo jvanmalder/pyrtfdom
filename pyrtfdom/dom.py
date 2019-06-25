@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import copy
+import copy, queue
 
 from pyrtfdom import elements
 from pyrtfdom.parse import RTFParser
@@ -481,4 +481,20 @@ class RTFDOM(object):
 		if curNode.children:
 			for child in curNode.children:
 				self.printTree(child, indent + '\t')
+
+	def concatAllValues(self):
+
+		nodes = queue.SimpleQueue()
+		nodes.put(self.__rootNode)
+		value = ''
+		while not nodes.empty():
+			node = nodes.get()
+			if isinstance(node.value, (bytes, bytearray)):
+				value += '<Binary Data>'
+			else:
+				value += node.value
+			if node.children:
+				for child in node.children:
+					nodes.put(child)
+		return value
 
