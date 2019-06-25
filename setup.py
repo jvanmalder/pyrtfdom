@@ -1,7 +1,8 @@
 from distutils.core import setup
+import setuptools
 setup(
   name = 'pyrtfdom',
-  packages = ['pyrtfdom'],
+  packages = setuptools.find_packages(),
   version = '1.0',
   license='gpl-3.0',
   description = 'Parses RTF documents into a DOM-like structure',
