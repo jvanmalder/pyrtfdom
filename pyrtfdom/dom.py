@@ -482,7 +482,7 @@ class RTFDOM(object):
 			for child in curNode.children:
 				self.printTree(child, indent + '\t')
 
-	def concatAllValues(self):
+	def concatAllValues(self, separator=''):
 
 		nodes = queue.SimpleQueue()
 		nodes.put(self.__rootNode)
@@ -490,9 +490,9 @@ class RTFDOM(object):
 		while not nodes.empty():
 			node = nodes.get()
 			if isinstance(node.value, (bytes, bytearray)):
-				value += '<Binary Data>'
+				value += separator + '<Binary Data>'
 			else:
-				value += node.value
+				value += separator + node.value
 			if node.children:
 				for child in node.children:
 					nodes.put(child)
